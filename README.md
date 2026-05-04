@@ -1,3 +1,4 @@
+
 # AI Medical Assistant (production-style demo)
 
 Full-stack demo: **FastAPI + MySQL + JWT** backend and a **vanilla HTML/CSS/JS** frontend with a medical-themed dashboard, AI chat, symptom checker, health tracking, and local appointment notes.
@@ -124,3 +125,6 @@ ai-medical-assistant/
 
 - `Base.metadata.create_all` in `app.py` helps local development; production deployments should use migrations (Alembic).
 - This project is an **educational assistant**, not a regulated medical device.
+=======
+# ai-medical-assistant
+AI Medical Assistant with symptom analysis, doctor recommendation, diet plan and appointment system
