@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <title>AI Medical Assistant - Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="pageLoader" class="page-loader" hidden aria-hidden="true">
+      <div class="page-loader-spinner"></div>
+    </div>
+
+    <div class="page dashboard-page fade-in">
+      <header class="topbar dash-top">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <div class="brand-title">AI Medical Assistant</div>
+            <div class="brand-sub" id="welcomeLine">Your health workspace</div>
+          </div>
+        </div>
+        <nav class="header-nav" aria-label="Main">
+          <a class="nav-link" href="index.html">Home</a>
+          <a class="nav-link" href="dashboard.html" aria-current="page">Dashboard</a>
+          <a class="nav-link" href="diet.html">Diet plan</a>
+          <a class="nav-link" href="faq.html">FAQ</a>
+        </nav>
+        <div class="top-actions">
+          <button type="button" class="btn danger outline pulse-hover" id="emergencyBtn" title="Emergency resources">
+            Emergency
+          </button>
+          <button type="button" class="btn ghost icon-toggle" id="themeToggle" aria-label="Toggle dark mode">
+            <span class="moon">🌙</span><span class="sun">☀️</span>
+          </button>
+          <button type="button" class="btn ghost" id="logoutBtn">Log out</button>
+        </div>
+      </header>
+
+      <main class="dashboard-layout">
+        <section class="grid-cards">
+          <article class="card stat-card slide-up">
+            <h3>Profile snapshot</h3>
+            <div class="stat-dl" id="profileStats"></div>
+            <button type="button" class="btn link" id="openProfileEditor">Edit profile</button>
+          </article>
+
+          <article class="card stat-card slide-up" style="animation-delay: 0.05s">
+            <h3>BMI calculator</h3>
+            <form id="bmiForm" class="stack tight">
+              <div class="grid-2">
+                <label class="field">
+                  <span>Weight (kg)</span>
+                  <input type="number" id="bmiWeight" min="1" max="500" step="0.1" required />
+                </label>
+                <label class="field">
+                  <span>Height (cm)</span>
+                  <input type="number" id="bmiHeight" min="50" max="280" step="0.1" required />
+                </label>
+              </div>
+              <button type="submit" class="btn secondary">Calculate BMI</button>
+            </form>
+            <p class="result-pill" id="bmiResult" hidden></p>
+          </article>
+
+          <article class="card stat-card slide-up" style="animation-delay: 0.1s">
+            <h3>Health tips</h3>
+            <ul class="tips" id="healthTips"></ul>
+          </article>
+        </section>
+
+        <section class="card main-chat slide-up" style="animation-delay: 0.12s">
+          <div class="chat-header">
+            <div>
+              <h2>Symptom checker</h2>
+              <p class="muted small">Use one symptom input for AI analysis, diet guidance, and doctor recommendations.</p>
+            </div>
+            <div class="chat-tools">
+              <button type="button" class="btn ghost small" id="voiceBtn" title="Voice input (browser dependent)">🎤</button>
+              <span class="chip" id="aiStatus">Ready</span>
+            </div>
+          </div>
+          <div class="chat-window" id="chatWindow" aria-live="polite">
+            <div class="analysis-intro">
+              <strong>How to use</strong>
+              <p>Enter one symptom such as <em>headache</em>, <em>cough</em>, or <em>fever</em>, then click Analyze symptom.</p>
+            </div>
+          </div>
+          <form id="chatForm" class="chat-composer">
+            <div class="composer-inner">
+              <textarea id="chatInput" rows="1" placeholder="Enter one symptom, e.g. headache" required></textarea>
+              <div class="composer-actions">
+                <button type="submit" class="btn primary" id="analyzeSend">
+                  <span class="analyze-label">Analyze symptom</span>
+                  <span class="spinner" id="symptomSpinner" hidden></span>
+                </button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <section class="two-col">
+          <article class="card slide-up" style="animation-delay: 0.13s">
+            <h2>Structured health analysis</h2>
+            <p class="muted small">Your single Symptom Checker input fills this report automatically.</p>
+            <div class="symptom-structured" id="symptomStructured" hidden></div>
+            <div class="symptom-pdf-row">
+              <button type="button" class="btn secondary small" id="downloadReportBtn" hidden>
+                Download PDF report
+              </button>
+            </div>
+          </article>
+
+          <article class="card slide-up" style="animation-delay: 0.14s">
+            <h2>Health tracker</h2>
+            <p class="muted small">Log weight and height - BMI is stored per entry.</p>
+            <form id="healthForm" class="stack">
+              <div class="grid-2">
+                <label class="field">
+                  <span>Weight (kg)</span>
+                  <input type="number" id="healthWeight" min="1" max="500" step="0.1" required />
+                </label>
+                <label class="field">
+                  <span>Height (cm)</span>
+                  <input type="number" id="healthHeight" min="50" max="280" step="0.1" required />
+                </label>
+                <label class="field">
+                  <span>Date</span>
+                  <input type="date" id="healthDate" />
+                </label>
+              </div>
+              <button type="submit" class="btn secondary" id="healthSubmit">
+                Save entry
+                <span class="spinner inline" id="healthSpinner" hidden></span>
+              </button>
+            </form>
+            <div class="table-wrap">
+              <table class="data-table" id="healthTable">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Weight</th>
+                    <th>BMI</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="card slide-up" style="animation-delay: 0.16s">
+          <h2>Doctor recommendation</h2>
+          <p class="muted small">Suggested doctors update after each symptom analysis, and you can still book directly from any card.</p>
+          <div class="doctor-grid" id="doctorGrid"></div>
+        </section>
+
+        <section class="card slide-up" style="animation-delay: 0.18s">
+          <h2>My appointments</h2>
+          <p class="muted small">Book from a doctor card above, or use quick book here after selecting a doctor.</p>
+          <ul class="appt-list" id="apptList"></ul>
+        </section>
+
+        <section class="card slide-up" style="animation-delay: 0.2s">
+          <h2>Recent analysis history</h2>
+          <p class="muted small">Recent symptom and assistant records from your account.</p>
+          <div class="history-scroll" id="historyScroll"></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal" id="bookModal" hidden>
+      <div class="modal-backdrop" data-close="1"></div>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bookModalTitle">
+        <h2 id="bookModalTitle">Book appointment</h2>
+        <p class="muted small" id="bookDoctorLabel"></p>
+        <form id="bookForm" class="stack">
+          <input type="hidden" id="bookDoctorId" />
+          <div class="grid-2">
+            <label class="field">
+              <span>Date</span>
+              <input type="date" id="bookDate" required />
+            </label>
+            <label class="field">
+              <span>Time</span>
+              <input type="time" id="bookTime" required />
+            </label>
+          </div>
+          <label class="field">
+            <span>Notes (optional)</span>
+            <input type="text" id="bookNotes" maxlength="500" placeholder="Reason for visit..." />
+          </label>
+          <div class="modal-actions">
+            <button type="button" class="btn ghost" data-close="1">Cancel</button>
+            <button type="submit" class="btn primary" id="bookSubmit">
+              <span class="btn-text">Confirm booking</span>
+              <span class="spinner btn-spinner" id="bookSpinner" hidden></span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal" id="doctorDetailModal" hidden>
+      <div class="modal-backdrop" data-close="1"></div>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="doctorDetailTitle">
+        <h2 id="doctorDetailTitle">Doctor details</h2>
+        <div class="doctor-detail-card">
+          <img class="doctor-detail-photo" id="doctorDetailPhoto" alt="" />
+          <div>
+            <h3 id="doctorDetailName"></h3>
+            <p class="muted" id="doctorDetailSpec"></p>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn secondary" id="doctorDetailChatBtn">Chat with Doctor</button>
+          <button type="button" class="btn primary" id="doctorDetailBookBtn">Book Appointment</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="doctorChatModal" hidden>
+      <div class="modal-backdrop" data-close="1"></div>
+      <div class="modal-card doctor-chat-modal" role="dialog" aria-modal="true" aria-labelledby="doctorChatTitle">
+        <div class="doctor-chat-head">
+          <div>
+            <h2 id="doctorChatTitle">Doctor chat</h2>
+            <p class="muted small" id="doctorChatSubtitle"></p>
+          </div>
+          <button type="button" class="btn ghost small" data-close="1">Close</button>
+        </div>
+        <div class="doctor-chat-window" id="doctorChatWindow" aria-live="polite"></div>
+        <form id="doctorChatForm" class="chat-composer">
+          <div class="composer-inner">
+            <textarea id="doctorChatInput" rows="1" placeholder="Ask your question..." required></textarea>
+            <div class="composer-actions">
+              <button type="submit" class="btn primary" id="doctorChatSend">
+                <span class="send-label">Send</span>
+                <span class="spinner" id="doctorChatSpinner" hidden></span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal" id="profileModal" hidden>
+      <div class="modal-backdrop" data-close="1"></div>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+        <h2 id="profileModalTitle">Edit profile</h2>
+        <form id="profileForm" class="stack">
+          <label class="field">
+            <span>Name</span>
+            <input type="text" name="name" required minlength="2" />
+          </label>
+          <div class="grid-2">
+            <label class="field">
+              <span>Age</span>
+              <input type="number" name="age" min="0" max="130" />
+            </label>
+            <label class="field">
+              <span>Weight (kg)</span>
+              <input type="number" name="weight_kg" min="1" max="500" step="0.1" />
+            </label>
+            <label class="field">
+              <span>Height (cm)</span>
+              <input type="number" name="height_cm" min="50" max="280" step="0.1" />
+            </label>
+          </div>
+          <label class="field">
+            <span>Medical history</span>
+            <textarea name="medical_history" rows="4" maxlength="4000"></textarea>
+          </label>
+          <div class="modal-actions">
+            <button type="button" class="btn ghost" data-close="1">Cancel</button>
+            <button type="submit" class="btn primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal" id="emergencyModal" hidden>
+      <div class="modal-backdrop" data-close="1"></div>
+      <div class="modal-card" role="dialog" aria-modal="true">
+        <h2>Emergency help</h2>
+        <p class="muted">
+          For life-threatening emergencies, call <strong id="emergencyNumberDisplay">105</strong> or your local emergency number immediately.
+        </p>
+        <h3 class="h3-tight">Nearby hospitals</h3>
+        <ul class="hospital-list" id="hospitalList"></ul>
+        <div class="modal-actions">
+          <button type="button" class="btn primary" data-close="1">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <div class="footer-brand">
+          <strong>AI Medical Assistant</strong>
+          <p class="muted small footer-copy">© 2026 AI Medical Assistant. Developed by Dishanth Naik.</p>
+        </div>
+        <nav class="footer-nav" aria-label="Footer">
+          <a href="index.html">Home</a>
+          <a href="dashboard.html">Dashboard</a>
+          <a href="diet.html">Diet plan</a>
+          <a href="faq.html">FAQ</a>
+        </nav>
+      </div>
+      <p class="footer-disclaimer" id="disclaimer">
+        <strong>Medical disclaimer:</strong> This application does not provide medical diagnosis or treatment. Always consult a
+        licensed healthcare professional for medical decisions, emergencies, or medication changes.
+      </p>
+    </footer>
+
+    <div class="toast-stack">
+      <div class="toast" id="toast" hidden role="status"></div>
+    </div>
+    <div class="alert-banner" id="alertBanner" hidden role="alert"></div>
+
+    <script src="script.js"></script>
+    <script>
+      window.MEDASSIST_PAGE = "dashboard";
+    </script>
+  </body>
+</html>

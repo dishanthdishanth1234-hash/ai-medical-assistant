@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <title>Diet plan — AI Medical Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="pageLoader" class="page-loader" hidden aria-hidden="true">
+      <div class="page-loader-spinner"></div>
+    </div>
+
+    <div class="page diet-page fade-in">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <div class="brand-title">AI Medical Assistant</div>
+            <div class="brand-sub">Diet & wellness guidance</div>
+          </div>
+        </div>
+        <nav class="header-nav" aria-label="Main">
+          <a class="nav-link" href="index.html">Home</a>
+          <a class="nav-link" href="dashboard.html">Dashboard</a>
+          <a class="nav-link" href="diet.html" aria-current="page">Diet plan</a>
+          <a class="nav-link" href="faq.html">FAQ</a>
+        </nav>
+        <button type="button" class="btn ghost icon-toggle" id="themeToggle" aria-label="Toggle dark mode">
+          <span class="moon">🌙</span><span class="sun">☀️</span>
+        </button>
+      </header>
+
+      <main class="diet-main card-elevated">
+        <h1>Personalized diet orientation</h1>
+        <p class="muted">General recommendations — not a substitute for a registered dietitian or your doctor’s plan.</p>
+        <div id="dietContent" class="diet-sections">
+          <p class="muted">Loading…</p>
+        </div>
+      </main>
+    </div>
+
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <div class="footer-brand">
+          <strong>AI Medical Assistant</strong>
+          <p class="muted small footer-copy">© 2026 AI Medical Assistant. Developed by Dishanth Naik.</p>
+        </div>
+        <nav class="footer-nav" aria-label="Footer">
+          <a href="index.html">Home</a>
+          <a href="dashboard.html">Dashboard</a>
+          <a href="diet.html">Diet plan</a>
+          <a href="faq.html">FAQ</a>
+        </nav>
+      </div>
+      <p class="footer-disclaimer" id="disclaimer">
+        <strong>Medical disclaimer:</strong> This application does not provide medical diagnosis or treatment. Always consult a
+        licensed healthcare professional for medical decisions, emergencies, or medication changes.
+      </p>
+    </footer>
+
+    <div class="toast-stack">
+      <div class="toast" id="toast" hidden role="status"></div>
+    </div>
+    <div class="alert-banner" id="alertBanner" hidden role="alert"></div>
+
+    <script src="script.js"></script>
+    <script>
+      window.MEDASSIST_PAGE = "diet";
+    </script>
+  </body>
+</html>

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <title>AI Medical Assistant - Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="pageLoader" class="page-loader" hidden aria-hidden="true">
+      <div class="page-loader-spinner"></div>
+    </div>
+
+    <div class="page admin-page fade-in">
+      <header class="topbar dash-top">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <div class="brand-title">AI Medical Assistant</div>
+            <div class="brand-sub" id="adminWelcome">Admin workspace</div>
+          </div>
+        </div>
+        <nav class="header-nav" aria-label="Main">
+          <a class="nav-link" href="index.html">Home</a>
+          <a class="nav-link" href="dashboard.html">Dashboard</a>
+          <a class="nav-link" href="diet.html">Diet plan</a>
+          <a class="nav-link" href="admin.html" aria-current="page">Admin</a>
+        </nav>
+        <div class="top-actions">
+          <button type="button" class="btn ghost icon-toggle" id="themeToggle" aria-label="Toggle dark mode">
+            <span class="moon">🌙</span><span class="sun">☀️</span>
+          </button>
+          <button type="button" class="btn ghost" id="logoutBtn">Log out</button>
+        </div>
+      </header>
+
+      <main class="admin-shell">
+        <aside class="admin-sidebar card">
+          <button type="button" class="admin-nav-btn active" data-section="overview" aria-pressed="true">Overview</button>
+          <button type="button" class="admin-nav-btn" data-section="users" aria-pressed="false">Users</button>
+          <button type="button" class="admin-nav-btn" data-section="doctors" aria-pressed="false">Doctors</button>
+          <button type="button" class="admin-nav-btn" data-section="appointments" aria-pressed="false">Appointments</button>
+          <button type="button" class="admin-nav-btn" data-section="hospitals" aria-pressed="false">Nearby hospitals</button>
+          <button type="button" class="admin-nav-btn" data-section="reports" aria-pressed="false">Reports</button>
+          <button type="button" class="admin-nav-btn" data-section="settings" aria-pressed="false">Settings</button>
+        </aside>
+
+        <section class="admin-main">
+          <section class="admin-section" id="overview">
+            <div class="admin-header-block">
+              <h1>Dashboard overview</h1>
+              <p class="muted">Monitor platform activity and manage operational data without affecting the patient dashboard.</p>
+            </div>
+            <div class="admin-stat-grid">
+              <article class="card admin-stat-card">
+                <span class="admin-stat-label">Total users</span>
+                <strong id="statUsers">0</strong>
+              </article>
+              <article class="card admin-stat-card">
+                <span class="admin-stat-label">Total doctors</span>
+                <strong id="statDoctors">0</strong>
+              </article>
+              <article class="card admin-stat-card">
+                <span class="admin-stat-label">Total appointments</span>
+                <strong id="statAppointments">0</strong>
+              </article>
+            </div>
+          </section>
+
+          <section class="admin-section" id="users" hidden>
+            <div class="admin-header-block">
+              <h2>Manage users</h2>
+              <p class="muted">Review accounts and grant or revoke admin access securely.</p>
+            </div>
+            <div class="card admin-table-card">
+              <div class="table-wrap">
+                <table class="data-table" id="usersTable">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-section" id="doctors" hidden>
+            <div class="admin-header-block">
+              <h2>Manage doctors</h2>
+              <p class="muted">Add or update doctor photos, specialties, and years of experience.</p>
+            </div>
+            <div class="admin-split">
+              <article class="card">
+                <h3 id="doctorFormTitle">Add doctor</h3>
+                <form id="doctorForm" class="stack">
+                  <label class="field">
+                    <span>Name</span>
+                    <input type="text" id="doctorName" required />
+                  </label>
+                  <label class="field">
+                    <span>Specialization</span>
+                    <input type="text" id="doctorSpecialization" required />
+                  </label>
+                  <div class="grid-2">
+                    <label class="field">
+                      <span>Experience (years)</span>
+                      <input type="number" id="doctorExperience" min="0" max="80" required />
+                    </label>
+                    <label class="field">
+                      <span>Photo URL</span>
+                      <input type="url" id="doctorPhotoUrl" required />
+                    </label>
+                  </div>
+                  <div class="admin-form-actions">
+                    <button type="submit" class="btn primary"><span id="doctorSubmitText">Save doctor</span></button>
+                    <button type="button" class="btn ghost" id="doctorCancelEdit" hidden>Cancel edit</button>
+                  </div>
+                </form>
+              </article>
+              <article class="card admin-table-card">
+                <div class="table-wrap">
+                  <table class="data-table" id="doctorsTable">
+                    <thead>
+                      <tr>
+                        <th>Photo</th>
+                        <th>Name</th>
+                        <th>Specialization</th>
+                        <th>Experience</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="admin-section" id="appointments" hidden>
+            <div class="admin-header-block">
+              <h2>Manage appointments</h2>
+              <p class="muted">View all scheduled visits and update their current status.</p>
+            </div>
+            <div class="card admin-table-card">
+              <div class="table-wrap">
+                <table class="data-table" id="appointmentsTable">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Doctor</th>
+                      <th>Schedule</th>
+                      <th>Notes</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-section" id="hospitals" hidden>
+            <div class="admin-header-block">
+              <h2>Nearby hospitals</h2>
+              <p class="muted">Maintain emergency facility details shown to end users.</p>
+            </div>
+            <div class="admin-split">
+              <article class="card">
+                <h3 id="hospitalFormTitle">Add hospital</h3>
+                <form id="hospitalForm" class="stack">
+                  <label class="field">
+                    <span>Name</span>
+                    <input type="text" id="hospitalName" required />
+                  </label>
+                  <label class="field">
+                    <span>Address</span>
+                    <textarea id="hospitalAddress" rows="3" required></textarea>
+                  </label>
+                  <div class="grid-2">
+                    <label class="field">
+                      <span>Phone</span>
+                      <input type="text" id="hospitalPhone" required />
+                    </label>
+                    <label class="field">
+                      <span>Website</span>
+                      <input type="url" id="hospitalWebsite" />
+                    </label>
+                  </div>
+                  <div class="admin-form-actions">
+                    <button type="submit" class="btn primary"><span id="hospitalSubmitText">Save hospital</span></button>
+                    <button type="button" class="btn ghost" id="hospitalCancelEdit" hidden>Cancel edit</button>
+                  </div>
+                </form>
+              </article>
+              <article class="card admin-table-card">
+                <div class="table-wrap">
+                  <table class="data-table" id="hospitalsTable">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Address</th>
+                        <th>Phone</th>
+                        <th>Website</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="admin-section" id="reports" hidden>
+            <div class="admin-header-block">
+              <h2>Reports</h2>
+              <p class="muted">Review generated PDF reports and open or download them directly.</p>
+            </div>
+            <div class="card admin-table-card">
+              <div class="table-wrap">
+                <table class="data-table" id="reportsTable">
+                  <thead>
+                    <tr>
+                      <th>File name</th>
+                      <th>User</th>
+                      <th>Type</th>
+                      <th>Created</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-section" id="settings" hidden>
+            <div class="admin-header-block">
+              <h2>Settings</h2>
+              <p class="muted">Update the runtime API key, emergency number, and footer message used across the app.</p>
+            </div>
+            <article class="card">
+              <form id="settingsForm" class="stack">
+                <label class="field">
+                  <span>API key</span>
+                  <input type="password" id="settingsApiKey" placeholder="sk-..." />
+                </label>
+                <div class="grid-2">
+                  <label class="field">
+                    <span>Emergency number</span>
+                    <input type="text" id="settingsEmergencyNumber" required />
+                  </label>
+                </div>
+                <label class="field">
+                  <span>Footer text</span>
+                  <textarea id="settingsFooter" rows="5" required></textarea>
+                </label>
+                <div class="admin-form-actions">
+                  <button type="submit" class="btn primary">Save settings</button>
+                </div>
+              </form>
+            </article>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <div class="footer-brand">
+          <strong>AI Medical Assistant</strong>
+          <p class="muted small footer-copy">© 2026 AI Medical Assistant. Developed by Dishanth Naik.</p>
+        </div>
+        <nav class="footer-nav" aria-label="Footer">
+          <a href="index.html">Home</a>
+          <a href="dashboard.html">Dashboard</a>
+          <a href="diet.html">Diet plan</a>
+          <a href="admin.html">Admin</a>
+        </nav>
+      </div>
+      <p class="footer-disclaimer" id="disclaimer">
+        <strong>Medical disclaimer:</strong> This application does not provide medical diagnosis or treatment. Always consult a
+        licensed healthcare professional for medical decisions, emergencies, or medication changes.
+      </p>
+    </footer>
+
+    <div class="toast-stack">
+      <div class="toast" id="toast" hidden role="status"></div>
+    </div>
+    <div class="alert-banner" id="alertBanner" hidden role="alert"></div>
+
+    <script src="script.js"></script>
+    <script>
+      window.MEDASSIST_PAGE = "admin";
+    </script>
+  </body>
+</html>

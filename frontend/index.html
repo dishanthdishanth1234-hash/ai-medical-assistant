@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <title>AI Medical Assistant — Sign in</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=20260418b" />
+    <style>
+      .password-field {
+        position: relative;
+      }
+
+      .password-field > input {
+        padding-right: 3.6rem;
+      }
+
+      .password-field > .password-toggle {
+        position: absolute;
+        top: 50%;
+        right: 14px;
+        transform: translateY(-50%);
+        width: 2rem;
+        height: 2rem;
+        margin: 0;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: #047c8c;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+        z-index: 3;
+      }
+
+      .password-field > .password-toggle .password-toggle-glyph {
+        position: relative;
+        display: inline-block;
+        font-size: 1.15rem;
+        line-height: 1;
+        user-select: none;
+      }
+
+      .password-field > .password-toggle.is-visible .password-toggle-glyph::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 1.2rem;
+        height: 2px;
+        background: currentColor;
+        border-radius: 999px;
+        transform: translate(-50%, -50%) rotate(-35deg);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="pageLoader" class="page-loader" hidden aria-hidden="true">
+      <div class="page-loader-spinner"></div>
+    </div>
+
+    <div class="page auth-page fade-in">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <div class="brand-title">AI Medical Assistant</div>
+            <div class="brand-sub">Secure health companion</div>
+          </div>
+        </div>
+        <nav class="header-nav" aria-label="Main">
+          <a class="nav-link" href="index.html">Home</a>
+          <a class="nav-link" href="dashboard.html">Dashboard</a>
+          <a class="nav-link" href="diet.html">Diet plan</a>
+          <a class="nav-link" href="faq.html">FAQ</a>
+        </nav>
+        <button type="button" class="btn ghost icon-toggle" id="themeToggle" aria-label="Toggle dark mode">
+          <span class="moon">🌙</span><span class="sun">☀️</span>
+        </button>
+      </header>
+
+      <main class="auth-shell card-elevated">
+        <div class="auth-tabs" role="tablist">
+          <button class="tab active" type="button" data-tab="login" role="tab" aria-selected="true">Login</button>
+          <button class="tab" type="button" data-tab="register" role="tab" aria-selected="false">Register</button>
+        </div>
+
+        <section id="panel-login" class="auth-panel active" role="tabpanel">
+          <h1>Welcome back</h1>
+          <p class="muted">Sign in to access your dashboard and AI assistant.</p>
+          <form id="loginForm" class="stack" novalidate autocomplete="off">
+            <label class="field">
+              <span>Email</span>
+              <input type="email" name="email" required autocomplete="off" placeholder="you@example.com" />
+            </label>
+            <label class="field">
+              <span>Password</span>
+              <div class="password-field">
+                <input type="password" name="password" required minlength="8" autocomplete="new-password" />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  data-password-toggle="1"
+                  aria-label="Show password"
+                  aria-pressed="false"
+                  title="Show password"
+                  onmousedown="event.preventDefault()"
+                  onclick="(function(btn){const input=btn.parentElement.querySelector('input');if(!input)return false;const visible=input.type!=='text';input.type=visible?'text':'password';btn.setAttribute('aria-pressed', String(visible));btn.setAttribute('aria-label', visible?'Hide password':'Show password');btn.title=visible?'Hide password':'Show password';btn.classList.toggle('is-visible', visible);const wrap=btn.closest('.password-field');if(wrap)wrap.classList.toggle('is-visible', visible);const glyph=btn.querySelector('.password-toggle-glyph');if(glyph)glyph.textContent='👁';input.focus({preventScroll:true});return false;})(this)"
+                >
+                  <span class="password-toggle-glyph" aria-hidden="true">👁</span>
+                </button>
+              </div>
+            </label>
+            <button type="button" class="btn link auth-inline-link" id="openForgotPassword">
+              Forgot password?
+            </button>
+            <p class="form-error" id="loginError" hidden></p>
+            <button type="submit" class="btn primary wide">
+              <span class="btn-text">Sign in</span>
+              <span class="spinner btn-spinner" id="loginSpinner" hidden></span>
+            </button>
+          </form>
+
+          <div class="forgot-password-card" id="forgotPasswordCard" hidden>
+            <div class="forgot-password-head">
+              <h2>Reset password</h2>
+              <button type="button" class="btn ghost small" id="closeForgotPassword">Close</button>
+            </div>
+            <p class="muted small">Enter your registered email, verify the OTP, then create a new password.</p>
+
+            <div class="forgot-password-steps">
+              <section class="forgot-password-step">
+                <h3 class="reg-step-title">Step 1 - Send reset OTP</h3>
+                <div class="stack">
+                  <label class="field">
+                    <span>Registered email</span>
+                    <input type="email" id="resetEmail" autocomplete="email" placeholder="you@example.com" required />
+                  </label>
+                  <button type="button" class="btn secondary wide" id="sendResetOtpBtn">
+                    <span class="btn-text">Send reset code</span>
+                    <span class="spinner btn-spinner" id="resetOtpSendSpinner" hidden></span>
+                  </button>
+                  <button type="button" class="btn ghost wide" id="resendResetOtpBtn" hidden>Resend code</button>
+                  <p class="hint muted small" id="resetOtpHint" hidden></p>
+                </div>
+              </section>
+
+              <div class="otp-reveal card-elevated" id="resetOtpRevealBox" hidden>
+                <strong>Your password reset code</strong>
+                <p class="muted small">Use this only for your own account. For production, configure SMTP so codes are only emailed.</p>
+                <div class="otp-code-row">
+                  <code id="resetOtpCodeDisplay"></code>
+                  <button type="button" class="btn secondary small" id="copyResetOtpBtn">Copy</button>
+                </div>
+              </div>
+
+              <form id="verifyResetOtpForm" class="stack" novalidate hidden>
+                <h3 class="reg-step-title">Step 2 - Verify OTP</h3>
+                <label class="field">
+                  <span>6-digit code</span>
+                  <input type="text" id="resetOtpInput" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required />
+                </label>
+                <p class="form-error" id="verifyResetError" hidden></p>
+                <button type="submit" class="btn secondary wide">
+                  <span class="btn-text">Verify code</span>
+                  <span class="spinner btn-spinner" id="verifyResetSpinner" hidden></span>
+                </button>
+              </form>
+
+              <form id="resetPasswordForm" class="stack" novalidate hidden>
+                <h3 class="reg-step-title">Step 3 - Create new password</h3>
+                <label class="field">
+                  <span>New password</span>
+                  <div class="password-field">
+                    <input type="password" id="resetNewPassword" minlength="8" autocomplete="new-password" required />
+                    <button
+                      type="button"
+                      class="password-toggle"
+                      data-password-toggle="1"
+                      aria-label="Show password"
+                      aria-pressed="false"
+                      title="Show password"
+                      onmousedown="event.preventDefault()"
+                      onclick="(function(btn){const input=btn.parentElement.querySelector('input');if(!input)return false;const visible=input.type!=='text';input.type=visible?'text':'password';btn.setAttribute('aria-pressed', String(visible));btn.setAttribute('aria-label', visible?'Hide password':'Show password');btn.title=visible?'Hide password':'Show password';btn.classList.toggle('is-visible', visible);const wrap=btn.closest('.password-field');if(wrap)wrap.classList.toggle('is-visible', visible);const glyph=btn.querySelector('.password-toggle-glyph');if(glyph)glyph.textContent='👁';input.focus({preventScroll:true});return false;})(this)"
+                    >
+                      <span class="password-toggle-glyph" aria-hidden="true">👁</span>
+                    </button>
+                  </div>
+                </label>
+                <p class="form-error" id="resetPasswordError" hidden></p>
+                <button type="submit" class="btn primary wide">
+                  <span class="btn-text">Reset password</span>
+                  <span class="spinner btn-spinner" id="resetPasswordSpinner" hidden></span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <section id="panel-register" class="auth-panel" role="tabpanel" hidden>
+          <h1>Create your account</h1>
+          <p class="muted">Verify your email first, then complete your profile.</p>
+
+          <div class="reg-steps" aria-label="Registration steps">
+            <div class="reg-step" id="registerStep1">
+              <h2 class="reg-step-title">Step 1 — Verify email</h2>
+              <p class="hint muted small">We send a 6-digit code. If you do not use SMTP, the code appears on screen after you click send.</p>
+              <div class="stack">
+                <label class="field">
+                  <span>Email</span>
+                  <input type="email" id="regEmail" required autocomplete="off" placeholder="you@example.com" />
+                </label>
+                <button type="button" class="btn secondary wide" id="sendOtpBtn">
+                  <span class="btn-text">Send verification code</span>
+                  <span class="spinner btn-spinner" id="otpSendSpinner" hidden></span>
+                </button>
+                <button type="button" class="btn ghost wide" id="resendOtpBtn" hidden>Resend code</button>
+                <p class="hint muted small" id="otpHint" hidden></p>
+              </div>
+            </div>
+
+            <div class="otp-reveal card-elevated" id="otpRevealBox" hidden>
+              <strong>Your verification code</strong>
+              <p class="muted small">Copy this into Step 2. Do not share it. For production, configure SMTP so codes are only sent by email.</p>
+              <div class="otp-code-row">
+                <code id="otpCodeDisplay"></code>
+                <button type="button" class="btn secondary small" id="copyOtpBtn">Copy</button>
+              </div>
+            </div>
+
+            <div class="reg-step" id="registerStep2" hidden>
+              <h2 class="reg-step-title">Step 2 — Account details</h2>
+              <p class="hint muted small">Enter the code from your email (or from the box above), then your name and password.</p>
+            </div>
+          </div>
+
+          <form id="registerForm" class="stack" novalidate autocomplete="off">
+            <fieldset id="regFieldset" class="stack reg-fieldset" disabled>
+              <label class="field">
+                <span>6-digit code</span>
+                <input type="text" name="otp" id="regOtpInput" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required placeholder="000000" />
+              </label>
+              <label class="field">
+                <span>Full name</span>
+                <input type="text" name="name" required minlength="2" autocomplete="name" />
+              </label>
+              <label class="field">
+                <span>Password (8+ characters)</span>
+                <div class="password-field">
+                  <input type="password" name="password" required minlength="8" autocomplete="new-password" />
+                  <button
+                    type="button"
+                    class="password-toggle"
+                    data-password-toggle="1"
+                    aria-label="Show password"
+                    aria-pressed="false"
+                    title="Show password"
+                    onmousedown="event.preventDefault()"
+                    onclick="(function(btn){const input=btn.parentElement.querySelector('input');if(!input)return false;const visible=input.type!=='text';input.type=visible?'text':'password';btn.setAttribute('aria-pressed', String(visible));btn.setAttribute('aria-label', visible?'Hide password':'Show password');btn.title=visible?'Hide password':'Show password';btn.classList.toggle('is-visible', visible);const wrap=btn.closest('.password-field');if(wrap)wrap.classList.toggle('is-visible', visible);const glyph=btn.querySelector('.password-toggle-glyph');if(glyph)glyph.textContent='👁';input.focus({preventScroll:true});return false;})(this)"
+                  >
+                    <span class="password-toggle-glyph" aria-hidden="true">👁</span>
+                  </button>
+                </div>
+              </label>
+              <div class="grid-2">
+                <label class="field">
+                  <span>Age (optional)</span>
+                  <input type="number" name="age" min="0" max="130" step="1" />
+                </label>
+                <label class="field">
+                  <span>Weight kg (optional)</span>
+                  <input type="number" name="weight_kg" min="1" max="500" step="0.1" />
+                </label>
+                <label class="field">
+                  <span>Height cm (optional)</span>
+                  <input type="number" name="height_cm" min="50" max="280" step="0.1" />
+                </label>
+              </div>
+              <label class="field">
+                <span>Medical history notes (optional)</span>
+                <textarea name="medical_history" rows="3" maxlength="4000" placeholder="Allergies, chronic conditions…"></textarea>
+              </label>
+              <p class="form-error" id="registerError" hidden></p>
+            </fieldset>
+            <button type="submit" class="btn primary wide">
+              <span class="btn-text">Create account</span>
+              <span class="spinner btn-spinner" id="registerSpinner" hidden></span>
+            </button>
+          </form>
+        </section>
+
+        <p class="fine-print">
+          By continuing you acknowledge this app provides general information only and does not replace a clinician.
+        </p>
+      </main>
+    </div>
+
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <div class="footer-brand">
+          <strong>AI Medical Assistant</strong>
+          <p class="muted small footer-copy">© 2026 AI Medical Assistant. Developed by Dishanth Naik.</p>
+        </div>
+        <nav class="footer-nav" aria-label="Footer">
+          <a href="index.html">Home</a>
+          <a href="dashboard.html">Dashboard</a>
+          <a href="diet.html">Diet plan</a>
+          <a href="faq.html">FAQ</a>
+        </nav>
+      </div>
+      <p class="footer-disclaimer" id="disclaimer">
+        <strong>Medical disclaimer:</strong> This application does not provide medical diagnosis or treatment. Always consult a
+        licensed healthcare professional for medical decisions, emergencies, or medication changes.
+      </p>
+    </footer>
+
+    <div class="toast-stack">
+      <div class="toast" id="toast" hidden role="status"></div>
+    </div>
+    <div class="alert-banner" id="alertBanner" hidden role="alert"></div>
+
+    <script src="script.js?v=20260418b"></script>
+    <script>
+      window.MEDASSIST_PAGE = "auth";
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll("[data-password-toggle]").forEach((btn) => {
+          if (btn.dataset.inlineBound === "1") return;
+          const wrap = btn.closest(".password-field");
+          const input = wrap ? wrap.querySelector("input") : null;
+          const glyph = btn.querySelector(".password-toggle-glyph");
+          if (!input) return;
+
+          const sync = () => {
+            const visible = input.type === "text";
+            btn.setAttribute("aria-pressed", String(visible));
+            btn.setAttribute("aria-label", visible ? "Hide password" : "Show password");
+            btn.setAttribute("title", visible ? "Hide password" : "Show password");
+            btn.classList.toggle("is-visible", visible);
+            if (wrap) wrap.classList.toggle("is-visible", visible);
+            if (glyph) glyph.textContent = "👁";
+          };
+
+          btn.dataset.inlineBound = "1";
+          btn.addEventListener("mousedown", (e) => e.preventDefault());
+          btn.addEventListener("click", () => {
+            input.type = input.type === "password" ? "text" : "password";
+            sync();
+            input.focus({ preventScroll: true });
+          });
+
+          sync();
+        });
+
+        const openBtn = document.getElementById("openForgotPassword");
+        const closeBtn = document.getElementById("closeForgotPassword");
+        const forgotCard = document.getElementById("forgotPasswordCard");
+        if (openBtn && forgotCard && openBtn.dataset.inlineBound !== "1") {
+          openBtn.dataset.inlineBound = "1";
+          openBtn.addEventListener("click", () => {
+            forgotCard.hidden = false;
+            forgotCard.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+        }
+        if (closeBtn && forgotCard && closeBtn.dataset.inlineBound !== "1") {
+          closeBtn.dataset.inlineBound = "1";
+          closeBtn.addEventListener("click", () => {
+            forgotCard.hidden = true;
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

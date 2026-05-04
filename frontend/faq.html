@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <title>Frequently asked questions — AI Medical Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="pageLoader" class="page-loader" hidden aria-hidden="true">
+      <div class="page-loader-spinner"></div>
+    </div>
+
+    <div class="page faq-page fade-in">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <div class="brand-title">AI Medical Assistant</div>
+            <div class="brand-sub">Help &amp; clarity</div>
+          </div>
+        </div>
+        <nav class="header-nav" aria-label="Main">
+          <a class="nav-link" href="index.html">Home</a>
+          <a class="nav-link" href="dashboard.html">Dashboard</a>
+          <a class="nav-link" href="diet.html">Diet plan</a>
+          <a class="nav-link" href="faq.html" aria-current="page">FAQ</a>
+        </nav>
+        <button type="button" class="btn ghost icon-toggle" id="themeToggle" aria-label="Toggle dark mode">
+          <span class="moon">🌙</span><span class="sun">☀️</span>
+        </button>
+      </header>
+
+      <main class="faq-main card-elevated">
+        <header class="faq-header">
+          <h1>Frequently asked questions</h1>
+          <p class="muted faq-lead">
+            Quick answers about how this app uses AI, what the symptom tools can and cannot do, doctors, data practices, and
+            records systems — in plain language.
+          </p>
+        </header>
+
+        <div class="faq-list" id="faqAccordion">
+          <article class="faq-item faq-card slide-up" style="animation-delay: 0.03s">
+            <button
+              type="button"
+              class="faq-trigger"
+              id="faq-btn-1"
+              aria-expanded="false"
+              aria-controls="faq-panel-1"
+            >
+              <span class="faq-trigger-text">How is artificial intelligence used here?</span>
+              <span class="faq-trigger-icons" aria-hidden="true">
+                <span class="faq-icon-plus">+</span>
+                <span class="faq-icon-minus">−</span>
+              </span>
+            </button>
+            <div class="faq-panel-wrap" id="faq-panel-1" role="region" aria-labelledby="faq-btn-1">
+              <div class="faq-panel-inner">
+                <div class="faq-panel-content muted">
+                  <p>
+                    The assistant uses AI models to generate conversational guidance, summarize wellness topics, and structure
+                    educational outputs (for example, general precautions or types of specialists). It does not examine you,
+                    access your medical devices, or replace the judgment of a licensed clinician. Always treat AI output as
+                    informational, not authoritative medical advice.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="faq-item faq-card slide-up" style="animation-delay: 0.06s">
+            <button
+              type="button"
+              class="faq-trigger"
+              id="faq-btn-2"
+              aria-expanded="false"
+              aria-controls="faq-panel-2"
+            >
+              <span class="faq-trigger-text">What is the symptom checker, and what are its limits?</span>
+              <span class="faq-trigger-icons" aria-hidden="true">
+                <span class="faq-icon-plus">+</span>
+                <span class="faq-icon-minus">−</span>
+              </span>
+            </button>
+            <div class="faq-panel-wrap" id="faq-panel-2" role="region" aria-labelledby="faq-btn-2">
+              <div class="faq-panel-inner">
+                <div class="faq-panel-content muted">
+                  <p>
+                    The symptom experience is designed for orientation and education: it may suggest general precautions or
+                    categories of doctors to consider. It is <strong>not</strong> a diagnosis, triage service, or emergency
+                    tool. Symptoms overlap across many conditions; only an in-person or telehealth evaluation with appropriate
+                    tests can determine what is going on. If you have severe, sudden, or worsening symptoms, seek urgent care
+                    or emergency services immediately.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="faq-item faq-card slide-up" style="animation-delay: 0.09s">
+            <button
+              type="button"
+              class="faq-trigger"
+              id="faq-btn-3"
+              aria-expanded="false"
+              aria-controls="faq-panel-3"
+            >
+              <span class="faq-trigger-text">How do doctor recommendations and doctor cards work?</span>
+              <span class="faq-trigger-icons" aria-hidden="true">
+                <span class="faq-icon-plus">+</span>
+                <span class="faq-icon-minus">−</span>
+              </span>
+            </button>
+            <div class="faq-panel-wrap" id="faq-panel-3" role="region" aria-labelledby="faq-btn-3">
+              <div class="faq-panel-inner">
+                <div class="faq-panel-content muted">
+                  <p>
+                    Doctor profiles shown in the app are illustrative samples to help you understand specialties (for example,
+                    cardiology or dermatology). They are not live booking integrations with every provider in your area unless
+                    your deployment explicitly adds that. AI may suggest a <em>type</em> of doctor to discuss with your
+                    primary care team; it does not rank real-world clinicians or guarantee availability, insurance coverage, or
+                    quality.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="faq-item faq-card slide-up" style="animation-delay: 0.12s">
+            <button
+              type="button"
+              class="faq-trigger"
+              id="faq-btn-4"
+              aria-expanded="false"
+              aria-controls="faq-panel-4"
+            >
+              <span class="faq-trigger-text">How is my health information kept safe?</span>
+              <span class="faq-trigger-icons" aria-hidden="true">
+                <span class="faq-icon-plus">+</span>
+                <span class="faq-icon-minus">−</span>
+              </span>
+            </button>
+            <div class="faq-panel-wrap" id="faq-panel-4" role="region" aria-labelledby="faq-btn-4">
+              <div class="faq-panel-inner">
+                <div class="faq-panel-content muted">
+                  <p>
+                    Accounts use secure sign-in (including email verification where configured). Data you save in your profile
+                    or chats is stored according to your organization’s hosting and database policies. Use strong passwords, do
+                    not share your login, and avoid entering highly sensitive identifiers unless your deployment has been
+                    reviewed for compliance (for example HIPAA or GDPR) by qualified professionals. This FAQ cannot replace a
+                    formal privacy assessment for your environment.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="faq-item faq-card slide-up" style="animation-delay: 0.15s">
+            <button
+              type="button"
+              class="faq-trigger"
+              id="faq-btn-5"
+              aria-expanded="false"
+              aria-controls="faq-panel-5"
+            >
+              <span class="faq-trigger-text">Does the app connect to my hospital EMR or EHR?</span>
+              <span class="faq-trigger-icons" aria-hidden="true">
+                <span class="faq-icon-plus">+</span>
+                <span class="faq-icon-minus">−</span>
+              </span>
+            </button>
+            <div class="faq-panel-wrap" id="faq-panel-5" role="region" aria-labelledby="faq-btn-5">
+              <div class="faq-panel-inner">
+                <div class="faq-panel-content muted">
+                  <p>
+                    By default, this application does <strong>not</strong> automatically read or write your hospital
+                    Electronic Medical Record (EMR) or Electronic Health Record (EHR). Information you see here is what you or
+                    your deployment store in this app’s own database (profile, notes, appointments you create here, etc.).
+                    Integrating with Epic, Cerner, FHIR APIs, or regional health networks requires separate, explicit
+                    engineering, legal agreements, and patient consent workflows.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="faq-item faq-card slide-up" style="animation-delay: 0.18s">
+            <button
+              type="button"
+              class="faq-trigger"
+              id="faq-btn-6"
+              aria-expanded="false"
+              aria-controls="faq-panel-6"
+            >
+              <span class="faq-trigger-text">Can I use this instead of seeing a doctor or changing medications?</span>
+              <span class="faq-trigger-icons" aria-hidden="true">
+                <span class="faq-icon-plus">+</span>
+                <span class="faq-icon-minus">−</span>
+              </span>
+            </button>
+            <div class="faq-panel-wrap" id="faq-panel-6" role="region" aria-labelledby="faq-btn-6">
+              <div class="faq-panel-inner">
+                <div class="faq-panel-content muted">
+                  <p>
+                    No. The app provides general wellness and educational support only. Do not delay or avoid care because of
+                    chat responses. Do not start, stop, or change prescription drugs or dosages based on this tool; those
+                    decisions belong with your prescribing clinician.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="faq-item faq-card slide-up" style="animation-delay: 0.21s">
+            <button
+              type="button"
+              class="faq-trigger"
+              id="faq-btn-7"
+              aria-expanded="false"
+              aria-controls="faq-panel-7"
+            >
+              <span class="faq-trigger-text">What about diet plans and appointments shown in the app?</span>
+              <span class="faq-trigger-icons" aria-hidden="true">
+                <span class="faq-icon-plus">+</span>
+                <span class="faq-icon-minus">−</span>
+              </span>
+            </button>
+            <div class="faq-panel-wrap" id="faq-panel-7" role="region" aria-labelledby="faq-btn-7">
+              <div class="faq-panel-inner">
+                <div class="faq-panel-content muted">
+                  <p>
+                    Diet suggestions are high-level orientation — not a personalized meal prescription from a registered
+                    dietitian unless one has reviewed your case. Appointment features depend on how your instance is configured;
+                    they may be demos or local scheduling aids and are not a guarantee of clinical capacity at any facility.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <p class="faq-footer-note muted small">
+          Still unsure? Review the medical disclaimer in the site footer and speak with a qualified professional for decisions
+          about your care.
+        </p>
+      </main>
+    </div>
+
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <div class="footer-brand">
+          <strong>AI Medical Assistant</strong>
+          <p class="muted small footer-copy">© 2026 AI Medical Assistant. Developed by Dishanth Naik.</p>
+        </div>
+        <nav class="footer-nav" aria-label="Footer">
+          <a href="index.html">Home</a>
+          <a href="dashboard.html">Dashboard</a>
+          <a href="diet.html">Diet plan</a>
+          <a href="faq.html" aria-current="page">FAQ</a>
+        </nav>
+      </div>
+      <p class="footer-disclaimer" id="disclaimer">
+        <strong>Medical disclaimer:</strong> This application does not provide medical diagnosis or treatment. Always consult a
+        licensed healthcare professional for medical decisions, emergencies, or medication changes.
+      </p>
+    </footer>
+
+    <div class="toast-stack">
+      <div class="toast" id="toast" hidden role="status"></div>
+    </div>
+    <div class="alert-banner" id="alertBanner" hidden role="alert"></div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
