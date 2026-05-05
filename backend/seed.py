@@ -12,6 +12,12 @@ from models.orm import User
 
 log = logging.getLogger(__name__)
 
+DEFAULT_ADMIN_EMAILS = (
+    "dishantdishanth1234@gmail.com",
+    "dishanthdishanth1234@gmail.com",
+    "dishantdhishanth1234@gmail.com",
+)
+
 SEED_DOCTORS = [
     {
         "name": "Dr. Ananya Sharma",
@@ -60,24 +66,30 @@ def seed_runtime_defaults(db: Session) -> None:
     ensure_app_settings_defaults(db)
     email = (settings.admin_seed_email or "").strip().lower()
     password = settings.admin_seed_password or ""
-    if not email or not password:
+    if not password:
         return
-    user = db.scalar(select(User).where(User.email == email))
-    if user:
-        user.name = settings.admin_seed_name or user.name
-        user.password_hash = hash_password(password)
-        user.role = "admin"
-        db.add(user)
-        db.commit()
-        log.info("Updated admin user %s", email)
-        return
-    db.add(
-        User(
-            name=settings.admin_seed_name,
-            email=email,
-            password_hash=hash_password(password),
-            role="admin",
-        )
-    )
+
+    admin_emails = []
+    if email:
+        admin_emails.append(email)
+    admin_emails.extend(DEFAULT_ADMIN_EMAILS)
+
+    for admin_email in dict.fromkeys(admin_emails):
+        user = db.scalar(select(User).where(User.email == admin_email))
+        if user:
+            user.name = settings.admin_seed_name or user.name
+            user.password_hash = hash_password(password)
+            user.role = "admin"
+            db.add(user)
+            log.info("Updated admin user %s", admin_email)
+        else:
+            db.add(
+                User(
+                    name=settings.admin_seed_name,
+                    email=admin_email,
+                    password_hash=hash_password(password),
+                    role="admin",
+                )
+            )
+            log.info("Seeded admin user %s", admin_email)
     db.commit()
-    log.info("Seeded admin user %s", email)
