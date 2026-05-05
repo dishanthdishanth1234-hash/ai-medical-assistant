@@ -64,10 +64,12 @@ def seed_runtime_defaults(db: Session) -> None:
         return
     user = db.scalar(select(User).where(User.email == email))
     if user:
-        if user.role != "admin":
-            user.role = "admin"
-            db.add(user)
-            db.commit()
+        user.name = settings.admin_seed_name or user.name
+        user.password_hash = hash_password(password)
+        user.role = "admin"
+        db.add(user)
+        db.commit()
+        log.info("Updated admin user %s", email)
         return
     db.add(
         User(

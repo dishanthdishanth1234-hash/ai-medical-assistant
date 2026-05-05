@@ -35,8 +35,11 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
 
     admin_seed_name: str = Field(default="Admin", validation_alias="ADMIN_SEED_NAME")
-    admin_seed_email: str = Field(default="", validation_alias="ADMIN_SEED_EMAIL")
-    admin_seed_password: str = Field(default="", validation_alias="ADMIN_SEED_PASSWORD")
+    admin_seed_email: str = Field(
+        default="dishantdishanth1234@gmail.com",
+        validation_alias="ADMIN_SEED_EMAIL",
+    )
+    admin_seed_password: str = Field(default="dishanthmnaik", validation_alias="ADMIN_SEED_PASSWORD")
 
     # Email OTP (optional SMTP). If host is empty, OTP is only logged server-side.
     smtp_host: str = Field(default="", validation_alias="SMTP_HOST")
