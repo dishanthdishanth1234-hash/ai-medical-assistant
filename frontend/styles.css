@@ -1121,6 +1121,7 @@ html[data-theme="dark"] .chat-window {
 }
 
 .btn-spinner {
+  display: none !important;
   margin-left: 8px;
   vertical-align: middle;
 }
