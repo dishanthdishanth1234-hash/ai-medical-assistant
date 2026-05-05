@@ -129,6 +129,20 @@
     return data;
   }
 
+  function setButtonLoading(button, spinner, isLoading, loadingText) {
+    if (!button) return;
+    const textEl = $(".btn-text", button);
+    if (textEl && !button.dataset.defaultText) {
+      button.dataset.defaultText = textEl.textContent;
+    }
+    button.disabled = isLoading;
+    button.setAttribute("aria-busy", isLoading ? "true" : "false");
+    if (spinner) spinner.hidden = !isLoading;
+    if (textEl) {
+      textEl.textContent = isLoading && loadingText ? loadingText : button.dataset.defaultText || textEl.textContent;
+    }
+  }
+
   async function fetchCurrentUser(force = false) {
     if (!getToken()) return null;
     if (!force && currentUserCache) return currentUserCache;
@@ -361,7 +375,7 @@
       $("#registerError").hidden = true;
     }
 
-    async function sendRegistrationOtp() {
+    async function sendRegistrationOtp(triggerButton) {
       const emailEl = $("#regEmail");
       const email = (emailEl?.value || "").trim();
       if (!email) {
@@ -370,11 +384,19 @@
       }
       const sp = $("#otpSendSpinner");
       const hint = $("#otpHint");
-      sp.hidden = false;
+      const primaryButton = $("#sendOtpBtn");
+      const activeButton = triggerButton || primaryButton;
+      setButtonLoading(primaryButton, sp, true, "Sending...");
+      if (activeButton !== primaryButton) setButtonLoading(activeButton, null, true);
       try {
         const data = await api("/register/send-otp", { method: "POST", body: { email } });
         hint.hidden = false;
         hint.textContent = data.message || "Code sent.";
+
+        if (!data.email_sent && !data.dev_otp) {
+          showAlertBanner(data.message || "Could not send verification code. Check Gmail SMTP settings.", "error");
+          return;
+        }
 
         $("#registerStep2").hidden = false;
         const fs = $("#regFieldset");
@@ -402,22 +424,32 @@
       } catch (ex) {
         showAlertBanner(ex.message || "Could not send code", "error");
       } finally {
-        sp.hidden = true;
+        setButtonLoading(primaryButton, sp, false);
+        if (activeButton !== primaryButton) setButtonLoading(activeButton, null, false);
       }
     }
 
-    async function sendResetOtp() {
+    async function sendResetOtp(triggerButton) {
       const email = (resetEmail?.value || "").trim();
       if (!email) {
         showAlertBanner("Enter your registered email first.", "error");
         return;
       }
       const spinner = $("#resetOtpSendSpinner");
-      spinner.hidden = false;
+      const primaryButton = $("#sendResetOtpBtn");
+      const activeButton = triggerButton || primaryButton;
+      setButtonLoading(primaryButton, spinner, true, "Sending...");
+      if (activeButton !== primaryButton) setButtonLoading(activeButton, null, true);
       try {
         const data = await api("/forgot-password/send-otp", { method: "POST", body: { email } });
         resetOtpHint.hidden = false;
         resetOtpHint.textContent = data.message || "Reset code sent.";
+
+        if (!data.email_sent && !data.dev_otp) {
+          showAlertBanner(data.message || "Could not send reset code. Check Gmail SMTP settings.", "error");
+          return;
+        }
+
         verifyResetOtpForm.hidden = false;
         $("#resendResetOtpBtn").hidden = false;
         $("#verifyResetError").hidden = true;
@@ -439,7 +471,8 @@
       } catch (ex) {
         showAlertBanner(ex.message || "Could not send reset code", "error");
       } finally {
-        spinner.hidden = true;
+        setButtonLoading(primaryButton, spinner, false);
+        if (activeButton !== primaryButton) setButtonLoading(activeButton, null, false);
       }
     }
 
@@ -465,9 +498,10 @@
       const form = e.target;
       const err = $("#loginError");
       const sp = $("#loginSpinner");
+      const submitButton = form.querySelector('button[type="submit"]');
       err.hidden = true;
       const fd = new FormData(form);
-      sp.hidden = false;
+      setButtonLoading(submitButton, sp, true, "Signing in...");
       try {
         const data = await api("/login", {
           method: "POST",
@@ -482,16 +516,16 @@
         err.hidden = false;
         showAlertBanner(ex.message || "Login failed", "error");
       } finally {
-        sp.hidden = true;
+        setButtonLoading(submitButton, sp, false);
       }
     });
 
-    $("#sendOtpBtn")?.addEventListener("click", () => sendRegistrationOtp());
-    $("#resendOtpBtn")?.addEventListener("click", () => sendRegistrationOtp());
+    $("#sendOtpBtn")?.addEventListener("click", (e) => sendRegistrationOtp(e.currentTarget));
+    $("#resendOtpBtn")?.addEventListener("click", (e) => sendRegistrationOtp(e.currentTarget));
     $("#openForgotPassword")?.addEventListener("click", () => openForgotPasswordCard());
     $("#closeForgotPassword")?.addEventListener("click", () => closeForgotPasswordCard());
-    $("#sendResetOtpBtn")?.addEventListener("click", () => sendResetOtp());
-    $("#resendResetOtpBtn")?.addEventListener("click", () => sendResetOtp());
+    $("#sendResetOtpBtn")?.addEventListener("click", (e) => sendResetOtp(e.currentTarget));
+    $("#resendResetOtpBtn")?.addEventListener("click", (e) => sendResetOtp(e.currentTarget));
 
     $("#copyOtpBtn")?.addEventListener("click", async () => {
       const code = $("#otpCodeDisplay")?.textContent?.trim() || "";
@@ -519,8 +553,9 @@
       e.preventDefault();
       const err = $("#verifyResetError");
       const spinner = $("#verifyResetSpinner");
+      const submitButton = e.target.querySelector('button[type="submit"]');
       err.hidden = true;
-      spinner.hidden = false;
+      setButtonLoading(submitButton, spinner, true, "Verifying...");
       try {
         await api("/forgot-password/verify-otp", {
           method: "POST",
@@ -539,7 +574,7 @@
         err.textContent = ex.message || "OTP verification failed";
         err.hidden = false;
       } finally {
-        spinner.hidden = true;
+        setButtonLoading(submitButton, spinner, false);
       }
     });
 
@@ -548,6 +583,7 @@
       const form = e.target;
       const err = $("#registerError");
       const sp = $("#registerSpinner");
+      const submitButton = form.querySelector('button[type="submit"]');
       err.hidden = true;
       if ($("#regFieldset")?.disabled) {
         err.textContent = "Complete step 1: enter your email and click “Send verification code”.";
@@ -575,7 +611,7 @@
       if (w) payload.weight_kg = Number(w);
       if (h) payload.height_cm = Number(h);
       if (mh) payload.medical_history = String(mh);
-      sp.hidden = false;
+      setButtonLoading(submitButton, sp, true, "Creating...");
       try {
         await api("/register", { method: "POST", body: payload });
         toast("Account created — please sign in.", "success");
@@ -586,7 +622,7 @@
         err.hidden = false;
         showAlertBanner(ex.message || "Registration failed", "error");
       } finally {
-        sp.hidden = true;
+        setButtonLoading(submitButton, sp, false);
       }
     });
 
@@ -594,13 +630,14 @@
       e.preventDefault();
       const err = $("#resetPasswordError");
       const spinner = $("#resetPasswordSpinner");
+      const submitButton = e.target.querySelector('button[type="submit"]');
       err.hidden = true;
       if (!resetOtpVerified) {
         err.textContent = "Verify your OTP before setting a new password.";
         err.hidden = false;
         return;
       }
-      spinner.hidden = false;
+      setButtonLoading(submitButton, spinner, true, "Resetting...");
       try {
         await api("/forgot-password/reset", {
           method: "POST",
@@ -619,7 +656,7 @@
         err.textContent = ex.message || "Password reset failed";
         err.hidden = false;
       } finally {
-        spinner.hidden = true;
+        setButtonLoading(submitButton, spinner, false);
       }
     });
   }

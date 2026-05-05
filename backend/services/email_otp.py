@@ -1,6 +1,7 @@
 """Send OTP emails via SMTP (optional). Falls back to logging when SMTP is not configured."""
 import logging
 import smtplib
+from email.utils import formataddr
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -23,17 +24,25 @@ def send_otp_email(
     password = (settings.smtp_password or "").strip()
     port = settings.smtp_port
     from_addr = (settings.smtp_from or user or "").strip()
+    if not host and user.lower().endswith("@gmail.com"):
+        host = "smtp.gmail.com"
+        port = port or 587
 
-    body = f"{intro} {otp_code}\n\nIt expires in 15 minutes. {action_note}"
+    body = (
+        f"{intro}\n\n"
+        f"{otp_code}\n\n"
+        f"This code expires in {settings.otp_expire_minutes} minutes.\n"
+        f"{action_note}"
+    )
 
-    if not host or not from_addr:
+    if not host or not from_addr or not user or not password:
         log.warning("SMTP not configured - OTP for %s: %s (check server logs)", to_email, otp_code)
         return False
 
     try:
         msg = MIMEMultipart()
         msg["Subject"] = subject
-        msg["From"] = from_addr
+        msg["From"] = formataddr(("AI Medical Assistant", from_addr))
         msg["To"] = to_email
         msg.attach(MIMEText(body, "plain", "utf-8"))
 
@@ -47,6 +56,7 @@ def send_otp_email(
                 server.ehlo()
                 if settings.smtp_use_tls:
                     server.starttls()
+                    server.ehlo()
                 if user and password:
                     server.login(user, password)
                 server.sendmail(from_addr, [to_email], msg.as_string())

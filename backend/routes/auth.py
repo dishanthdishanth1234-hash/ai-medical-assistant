@@ -49,11 +49,9 @@ def register_send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
         dev = code if settings.show_otp_in_dev else None
     else:
         msg = (
-            "Email could not be sent (SMTP not set up or send failed). "
-            "Use the code shown below, or check the server console / configure SMTP in backend/.env."
+            "Email could not be sent. Check Gmail SMTP settings and try again."
         )
-        # Always return OTP in the JSON when email was not delivered so registration can continue locally.
-        dev = code
+        dev = code if settings.show_otp_in_dev else None
     return SendOtpResponse(message=msg, email_sent=email_sent, dev_otp=dev)
 
 
@@ -123,12 +121,9 @@ def forgot_password_send_otp(payload: SendOtpRequest, db: Session = Depends(get_
             dev_otp=code if settings.show_otp_in_dev else None,
         )
     return SendOtpResponse(
-        message=(
-            "Email could not be sent (SMTP not set up or send failed). "
-            "Use the code shown below, or check the server console / configure SMTP in backend/.env."
-        ),
+        message="Email could not be sent. Check Gmail SMTP settings and try again.",
         email_sent=False,
-        dev_otp=code,
+        dev_otp=code if settings.show_otp_in_dev else None,
     )
 
 
