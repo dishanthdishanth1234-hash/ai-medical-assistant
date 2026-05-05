@@ -137,7 +137,7 @@
     }
     button.disabled = isLoading;
     button.setAttribute("aria-busy", isLoading ? "true" : "false");
-    if (spinner) spinner.hidden = !isLoading;
+    if (spinner) spinner.hidden = true;
     if (textEl) {
       textEl.textContent = isLoading && loadingText ? loadingText : button.dataset.defaultText || textEl.textContent;
     }
