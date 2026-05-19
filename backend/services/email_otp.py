@@ -1,4 +1,4 @@
-"""Send OTP emails via Resend API (fast) or Gmail SMTP."""
+"""Send OTP emails via Resend (verified domain) or Gmail SMTP (any inbox)."""
 from __future__ import annotations
 
 import logging
@@ -15,7 +15,14 @@ from config import settings
 log = logging.getLogger(__name__)
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-_SMTP_TIMEOUT = 12  # seconds — avoid long waits when Gmail fails
+_SMTP_TIMEOUT = 15
+
+_RESEND_TEST_SENDER_HELP = (
+    "Cannot send to this address yet: Resend test sender (onboarding@resend.dev) only "
+    "delivers to your Resend signup email. To email all users: verify a domain at "
+    "https://resend.com/domains and set RESEND_FROM to e.g. noreply@yourdomain.com — "
+    "or configure Gmail SMTP_USER + SMTP_PASSWORD + SMTP_FROM on Render."
+)
 
 
 def _clean(value: str) -> str:
@@ -46,6 +53,12 @@ def _resend_from() -> str:
     return custom or "onboarding@resend.dev"
 
 
+def resend_uses_test_sender() -> bool:
+    """Resend test address — only the account owner inbox can receive mail."""
+    addr = _resend_from().lower()
+    return addr == "onboarding@resend.dev" or addr.endswith("@resend.dev")
+
+
 def _smtp_creds() -> tuple[str, str, str, str]:
     user = _clean(os.environ.get("SMTP_USER", "") or settings.smtp_user)
     password = _clean(os.environ.get("SMTP_PASSWORD", "") or settings.smtp_password).replace(" ", "")
@@ -70,11 +83,24 @@ def email_is_configured() -> bool:
 
 
 def email_provider() -> str:
-    if resend_is_configured():
+    if resend_is_configured() and not resend_uses_test_sender():
         return "resend"
     if smtp_is_configured():
         return "gmail_smtp"
+    if resend_is_configured():
+        return "resend_test"
     return "none"
+
+
+def _resend_restricted_recipient_error(err: str | None) -> bool:
+    if not err:
+        return False
+    e = err.lower()
+    return (
+        "only send testing emails" in e
+        or "verify a domain" in e
+        or "your own email address" in e
+    )
 
 
 def build_otp_email(otp_code: str, *, purpose: str) -> tuple[str, str, str]:
@@ -120,7 +146,10 @@ def _send_via_resend(to_email: str, subject: str, plain: str, html: str) -> tupl
         log.info("Resend email sent to %s", to_email)
         return True, None
     except Exception as exc:
-        log.exception("Resend failed for %s", to_email)
+        err = str(exc)
+        log.exception("Resend failed for %s: %s", to_email, err)
+        if _resend_restricted_recipient_error(err):
+            return False, _RESEND_TEST_SENDER_HELP
         return False, f"Resend could not send email: {exc}"
 
 
@@ -157,13 +186,24 @@ def _send_via_gmail_smtp(to_email: str, subject: str, plain: str, html: str) -> 
                 server.sendmail(from_addr, [to_email], raw)
         log.info("Gmail SMTP sent to %s", to_email)
         return True, None
+    except smtplib.SMTPAuthenticationError:
+        return (
+            False,
+            "Gmail rejected the App Password. Update SMTP_PASSWORD on Render "
+            "(https://myaccount.google.com/apppasswords).",
+        )
     except Exception as exc:
         log.exception("Gmail SMTP failed for %s", to_email)
-        return False, f"Email could not be sent: {exc}"
+        return False, f"Gmail could not send email: {exc}"
 
 
 def _send_message(to_email: str, subject: str, plain: str, html: str | None = None) -> tuple[bool, str | None]:
-    """Send to any inbox. Uses Resend only when configured (no slow Gmail fallback)."""
+    """
+    Deliver OTP to any address (Gmail, Outlook, Yahoo, …).
+
+    Resend test sender (onboarding@resend.dev) only works for the Resend account email —
+    we use Gmail SMTP first when both are configured.
+    """
     to_email = normalize_recipient(to_email)
     if not is_valid_email(to_email):
         return False, "Invalid email address."
@@ -172,8 +212,29 @@ def _send_message(to_email: str, subject: str, plain: str, html: str | None = No
 
     html_body = html or f"<pre>{plain}</pre>"
 
+    # Test Resend sender cannot mail arbitrary users — prefer Gmail when available
+    if smtp_is_configured() and (resend_uses_test_sender() or not resend_is_configured()):
+        ok, err = _send_via_gmail_smtp(to_email, subject, plain, html_body)
+        if ok:
+            return True, None
+        if not resend_is_configured():
+            return False, err
+        log.warning("Gmail SMTP failed for %s, trying Resend: %s", to_email, err)
+
+    if resend_is_configured() and not resend_uses_test_sender():
+        ok, err = _send_via_resend(to_email, subject, plain, html_body)
+        if ok:
+            return True, None
+        if smtp_is_configured():
+            log.warning("Resend failed for %s, trying Gmail: %s", to_email, err)
+            return _send_via_gmail_smtp(to_email, subject, plain, html_body)
+        return False, err
+
     if resend_is_configured():
-        return _send_via_resend(to_email, subject, plain, html_body)
+        ok, err = _send_via_resend(to_email, subject, plain, html_body)
+        if ok:
+            return True, None
+        return False, err or _RESEND_TEST_SENDER_HELP
 
     return _send_via_gmail_smtp(to_email, subject, plain, html_body)
 
@@ -188,18 +249,7 @@ def send_otp_email(
     return _send_message(to_email, subject, plain, html)
 
 
-def deliver_otp_email_background(to_email: str, otp_code: str, *, purpose: str) -> None:
-    """Called from FastAPI BackgroundTasks — does not block the HTTP response."""
-    try:
-        ok, err = send_otp_email(to_email, otp_code, purpose=purpose)
-        if not ok:
-            log.error("Background OTP email failed for %s: %s", to_email, err)
-    except Exception:
-        log.exception("Background OTP email crashed for %s", to_email)
-
-
 def send_welcome_email(to_email: str, name: str) -> None:
-    """Fire-and-forget friendly; logs errors only."""
     display = (name or "there").strip() or "there"
     subject = "Welcome to AI Medical Assistant"
     plain = (

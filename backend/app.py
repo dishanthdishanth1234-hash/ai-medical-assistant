@@ -24,7 +24,7 @@ import models.orm  # noqa: F401 — ensure all models register with Base.metadat
 from routes import admin, appointments, auth, chat, diet, doctors, health_data, reports, symptoms
 from seed import seed_doctors_if_empty, seed_runtime_defaults
 from services.data_retention import purge_expired_data
-from services.email_otp import email_is_configured, email_provider
+from services.email_otp import email_is_configured, email_provider, resend_uses_test_sender, smtp_is_configured
 
 log = logging.getLogger("uvicorn.error")
 
@@ -125,7 +125,15 @@ def root_redirect():
 @app.get("/healthz")
 def healthz():
     """Readiness probe; `email_ready` shows if OTP can be sent to registrants."""
-    return {"status": "ok", "email_ready": email_is_configured(), "email_provider": email_provider()}
+    return {
+        "status": "ok",
+        "email_ready": email_is_configured(),
+        "email_provider": email_provider(),
+        "resend_test_sender_only": resend_uses_test_sender(),
+        "gmail_smtp_configured": smtp_is_configured(),
+        "can_email_any_address": smtp_is_configured()
+        or (email_is_configured() and not resend_uses_test_sender()),
+    }
 
 
 def _local_ipv4() -> str:
