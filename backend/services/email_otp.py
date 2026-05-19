@@ -1,14 +1,11 @@
 """Send OTP emails via Resend API (recommended on Render) or Gmail SMTP."""
 from __future__ import annotations
 
-import json
 import logging
 import os
 import re
 import smtplib
 import ssl
-import urllib.error
-import urllib.request
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr
@@ -49,9 +46,8 @@ def _resend_api_key() -> str:
 
 
 def _resend_from() -> str:
-    default = "AI Medical Assistant <onboarding@resend.dev>"
     custom = _clean(os.environ.get("RESEND_FROM", "") or getattr(settings, "resend_from", "") or "")
-    return custom or default
+    return custom or "onboarding@resend.dev"
 
 
 def _smtp_creds() -> tuple[str, str, str, str]:
@@ -103,38 +99,24 @@ def _send_via_resend(to_email: str, subject: str, plain: str, html: str) -> tupl
     api_key = _resend_api_key()
     if not api_key:
         return False, None
-    payload = json.dumps(
-        {
-            "from": _resend_from(),
-            "to": [to_email],
-            "subject": subject,
-            "text": plain,
-            "html": html,
-        }
-    ).encode("utf-8")
-    req = urllib.request.Request(
-        "https://api.resend.com/emails",
-        data=payload,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            if 200 <= resp.status < 300:
-                log.info("Resend email sent to %s", to_email)
-                return True, None
-            body = resp.read().decode("utf-8", errors="replace")
-            return False, f"Resend error ({resp.status}): {body[:200]}"
-    except urllib.error.HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace")
-        log.exception("Resend HTTP error for %s: %s", to_email, body)
-        return False, f"Resend could not send email ({exc.code}). Check RESEND_API_KEY on Render."
+        import resend
+
+        resend.api_key = api_key
+        resend.Emails.send(
+            {
+                "from": _resend_from(),
+                "to": to_email,
+                "subject": subject,
+                "html": html,
+                "text": plain,
+            }
+        )
+        log.info("Resend email sent to %s", to_email)
+        return True, None
     except Exception as exc:
         log.exception("Resend failed for %s", to_email)
-        return False, f"Resend error: {exc}"
+        return False, f"Resend could not send email: {exc}"
 
 
 def _send_via_gmail_smtp(

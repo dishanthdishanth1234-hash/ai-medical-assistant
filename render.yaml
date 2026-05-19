@@ -25,5 +25,7 @@ services:
       - key: SMTP_USE_TLS
         value: "true"
       # Set in Render dashboard (do not commit secrets):
-      # SMTP_USER, SMTP_PASSWORD, SMTP_FROM (Gmail address + App Password)
+      # RESEND_API_KEY (recommended — from resend.com API Keys)
+      # RESEND_FROM=onboarding@resend.dev (optional)
+      # SMTP_USER, SMTP_PASSWORD, SMTP_FROM (optional Gmail fallback)
       # OPENAI_API_KEY (optional)
