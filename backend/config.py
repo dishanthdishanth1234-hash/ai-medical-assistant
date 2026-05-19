@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     smtp_from: str = Field(default="", validation_alias="SMTP_FROM")
     smtp_use_tls: bool = Field(default=True, validation_alias="SMTP_USE_TLS")
 
+    # Recommended on Render (HTTPS API — avoids Gmail SMTP blocks). Free tier: resend.com
+    resend_api_key: str = Field(default="", validation_alias="RESEND_API_KEY")
+    resend_from: str = Field(default="", validation_alias="RESEND_FROM")
+
     otp_expire_minutes: int = Field(default=15, validation_alias="OTP_EXPIRE_MINUTES")
     # Local dev only: API returns dev_otp in JSON (never enable in production).
     show_otp_in_dev: bool = Field(default=False, validation_alias="SHOW_OTP_IN_DEV")

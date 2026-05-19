@@ -24,7 +24,7 @@ import models.orm  # noqa: F401 — ensure all models register with Base.metadat
 from routes import admin, appointments, auth, chat, diet, doctors, health_data, reports, symptoms
 from seed import seed_doctors_if_empty, seed_runtime_defaults
 from services.data_retention import purge_expired_data
-from services.email_otp import smtp_is_configured
+from services.email_otp import email_is_configured, email_provider
 
 log = logging.getLogger("uvicorn.error")
 
@@ -55,11 +55,12 @@ async def lifespan(app: FastAPI):
             seed_runtime_defaults(db)
             purge_expired_data(db)
         purge_task = asyncio.create_task(_retention_purge_loop())
-        if not smtp_is_configured():
+        if not email_is_configured():
             log.warning(
-                "Gmail SMTP is NOT configured — registration and password reset cannot email OTP codes. "
-                "Set SMTP_HOST, SMTP_USER, SMTP_PASSWORD, SMTP_FROM in Render Environment."
+                "Email is NOT configured — set RESEND_API_KEY or Gmail SMTP_* in Render Environment."
             )
+        else:
+            log.info("Email provider: %s", email_provider())
     except Exception as exc:
         log.exception("Database connection failed")
         if not is_sqlite():
@@ -124,7 +125,7 @@ def root_redirect():
 @app.get("/healthz")
 def healthz():
     """Readiness probe; `email_ready` shows if OTP can be sent to registrants."""
-    return {"status": "ok", "email_ready": smtp_is_configured()}
+    return {"status": "ok", "email_ready": email_is_configured(), "email_provider": email_provider()}
 
 
 def _local_ipv4() -> str:

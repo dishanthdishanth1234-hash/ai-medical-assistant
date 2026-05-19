@@ -22,14 +22,19 @@ from models.schemas import (
     UserRegister,
 )
 from security import create_access_token, hash_password, verify_password
-from services.email_otp import is_valid_email, send_otp_email, send_welcome_email, smtp_is_configured
+from services.email_otp import (
+    email_is_configured,
+    is_valid_email,
+    send_otp_email,
+    send_welcome_email,
+)
 from services.otp_utils import generate_otp_digits, hash_otp, otp_expires_at
 
 router = APIRouter(prefix="", tags=["auth"])
 
-_EMAIL_FAIL_DETAIL = (
-    "Could not send email. The server must have Gmail SMTP configured "
-    "(SMTP_USER, SMTP_PASSWORD, SMTP_FROM). Check your inbox spam folder after retrying."
+_EMAIL_NOT_CONFIGURED = (
+    "Email is not configured on the server. On Render add RESEND_API_KEY (recommended, free at resend.com) "
+    "or Gmail SMTP_USER + SMTP_PASSWORD + SMTP_FROM, then redeploy."
 )
 
 
@@ -38,6 +43,7 @@ def _otp_delivery_response(
     email: str,
     code: str,
     email_sent: bool,
+    send_error: str | None,
     success_message: str,
     dev_fallback_message: str,
 ) -> SendOtpResponse:
@@ -53,7 +59,10 @@ def _otp_delivery_response(
             email_sent=False,
             dev_otp=code,
         )
-    raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=_EMAIL_FAIL_DETAIL)
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=send_error or "Could not send email. Try again or check spam.",
+    )
 
 
 @router.post("/register/send-otp", response_model=SendOtpResponse)
@@ -73,12 +82,12 @@ def register_send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
     else:
         db.add(RegistrationOtp(email=email, code_hash=h, expires_at=exp))
     db.commit()
-    if not smtp_is_configured():
+    if not email_is_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=_EMAIL_FAIL_DETAIL,
+            detail=_EMAIL_NOT_CONFIGURED,
         )
-    email_sent = send_otp_email(
+    email_sent, send_error = send_otp_email(
         email,
         code,
         purpose="verify your email for registration",
@@ -87,6 +96,7 @@ def register_send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
         email=email,
         code=code,
         email_sent=email_sent,
+        send_error=send_error,
         success_message=(
             f"Verification code sent to {email}. Open your inbox (subject: Your Code - ••••••) "
             "and enter the 6-digit code in step 2."
@@ -119,7 +129,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    if smtp_is_configured():
+    if email_is_configured():
         send_welcome_email(user.email, user.name)
     return user
 
@@ -149,12 +159,12 @@ def forgot_password_send_otp(payload: SendOtpRequest, db: Session = Depends(get_
     else:
         db.add(PasswordResetOtp(email=email, code_hash=code_hash, expires_at=expires_at))
     db.commit()
-    if not smtp_is_configured():
+    if not email_is_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=_EMAIL_FAIL_DETAIL,
+            detail=_EMAIL_NOT_CONFIGURED,
         )
-    email_sent = send_otp_email(
+    email_sent, send_error = send_otp_email(
         email,
         code,
         purpose="reset your password",
@@ -163,6 +173,7 @@ def forgot_password_send_otp(payload: SendOtpRequest, db: Session = Depends(get_
         email=email,
         code=code,
         email_sent=email_sent,
+        send_error=send_error,
         success_message=(
             f"Password reset code sent to {email}. Check your inbox "
             "(subject: Your Code - ••••••) and enter the 6-digit code below."

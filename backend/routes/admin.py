@@ -31,7 +31,7 @@ from models.schemas import (
 from config import settings
 from services.app_settings import get_runtime_settings
 from services.data_retention import retention_notice_text
-from services.email_otp import smtp_is_configured
+from services.email_otp import email_is_configured
 
 router = APIRouter(tags=["admin"])
 admin_router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(get_current_admin)])
@@ -76,7 +76,7 @@ def public_app_config(db: Session = Depends(get_db)):
         hospitals=hospitals,
         data_retention_hours=max(1, int(settings.user_data_retention_hours)),
         data_retention_notice=retention_notice_text(),
-        email_ready=smtp_is_configured(),
+        email_ready=email_is_configured(),
     )
 
 

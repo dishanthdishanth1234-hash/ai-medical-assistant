@@ -1,9 +1,14 @@
-"""Send OTP and notification emails to any address via Gmail SMTP."""
+"""Send OTP emails via Resend API (recommended on Render) or Gmail SMTP."""
 from __future__ import annotations
 
+import json
 import logging
+import os
 import re
 import smtplib
+import ssl
+import urllib.error
+import urllib.request
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr
@@ -15,6 +20,22 @@ log = logging.getLogger(__name__)
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
+def _clean(value: str) -> str:
+    return (value or "").strip().strip('"').strip("'")
+
+
+def _env(name: str) -> str:
+    """Prefer process environment (Render) over .env file."""
+    return _clean(os.environ.get(name, "") or getattr(settings, name.lower(), "") or "")
+
+
+def _env_bool(name: str, default: bool = True) -> bool:
+    raw = _clean(os.environ.get(name, ""))
+    if not raw:
+        return bool(getattr(settings, name.lower(), default))
+    return raw.lower() in ("1", "true", "yes", "on")
+
+
 def normalize_recipient(email: str) -> str:
     return (email or "").strip().lower()
 
@@ -23,75 +44,170 @@ def is_valid_email(email: str) -> bool:
     return bool(_EMAIL_RE.match(normalize_recipient(email)))
 
 
-def smtp_is_configured() -> bool:
-    user = (settings.smtp_user or "").strip()
-    password = (settings.smtp_password or "").strip().replace(" ", "")
-    from_addr = (settings.smtp_from or user or "").strip()
-    host = _smtp_host()
-    return bool(host and from_addr and user and password)
+def _resend_api_key() -> str:
+    return _clean(os.environ.get("RESEND_API_KEY", "") or getattr(settings, "resend_api_key", "") or "")
 
 
-def _smtp_host() -> str:
-    host = (settings.smtp_host or "").strip()
-    user = (settings.smtp_user or "").strip()
+def _resend_from() -> str:
+    default = "AI Medical Assistant <onboarding@resend.dev>"
+    custom = _clean(os.environ.get("RESEND_FROM", "") or getattr(settings, "resend_from", "") or "")
+    return custom or default
+
+
+def _smtp_creds() -> tuple[str, str, str, str]:
+    user = _clean(os.environ.get("SMTP_USER", "") or settings.smtp_user)
+    password = _clean(os.environ.get("SMTP_PASSWORD", "") or settings.smtp_password).replace(" ", "")
+    from_addr = _clean(os.environ.get("SMTP_FROM", "") or settings.smtp_from or user)
+    host = _clean(os.environ.get("SMTP_HOST", "") or settings.smtp_host)
     if not host and user.lower().endswith("@gmail.com"):
-        return "smtp.gmail.com"
-    return host
+        host = "smtp.gmail.com"
+    return host, user, password, from_addr
 
 
-def _smtp_port() -> int:
-    port = settings.smtp_port
-    if not (settings.smtp_host or "").strip() and (settings.smtp_user or "").strip().lower().endswith("@gmail.com"):
-        return port or 587
-    return port or 587
+def smtp_is_configured() -> bool:
+    host, user, password, from_addr = _smtp_creds()
+    return bool(host and user and password and from_addr)
 
 
-def _send_message(to_email: str, subject: str, plain: str, html: str | None = None) -> bool:
-    """Deliver email to `to_email` (any provider: Gmail, Outlook, Yahoo, etc.)."""
+def resend_is_configured() -> bool:
+    return bool(_resend_api_key())
+
+
+def email_is_configured() -> bool:
+    return resend_is_configured() or smtp_is_configured()
+
+
+def email_provider() -> str:
+    if resend_is_configured():
+        return "resend"
+    if smtp_is_configured():
+        return "gmail_smtp"
+    return "none"
+
+
+def _friendly_smtp_error(exc: Exception) -> str:
+    if isinstance(exc, smtplib.SMTPAuthenticationError):
+        return (
+            "Gmail rejected the App Password. Create a new one at "
+            "https://myaccount.google.com/apppasswords — or add RESEND_API_KEY on Render "
+            "(free at resend.com) for reliable email."
+        )
+    if isinstance(exc, smtplib.SMTPConnectError):
+        return "Could not reach Gmail SMTP. Try RESEND_API_KEY on Render instead (resend.com)."
+    if isinstance(exc, TimeoutError):
+        return "Email server timed out. Try again."
+    return f"Email could not be sent: {exc}"
+
+
+def _send_via_resend(to_email: str, subject: str, plain: str, html: str) -> tuple[bool, str | None]:
+    api_key = _resend_api_key()
+    if not api_key:
+        return False, None
+    payload = json.dumps(
+        {
+            "from": _resend_from(),
+            "to": [to_email],
+            "subject": subject,
+            "text": plain,
+            "html": html,
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            if 200 <= resp.status < 300:
+                log.info("Resend email sent to %s", to_email)
+                return True, None
+            body = resp.read().decode("utf-8", errors="replace")
+            return False, f"Resend error ({resp.status}): {body[:200]}"
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        log.exception("Resend HTTP error for %s: %s", to_email, body)
+        return False, f"Resend could not send email ({exc.code}). Check RESEND_API_KEY on Render."
+    except Exception as exc:
+        log.exception("Resend failed for %s", to_email)
+        return False, f"Resend error: {exc}"
+
+
+def _send_via_gmail_smtp(
+    to_email: str, subject: str, plain: str, html: str
+) -> tuple[bool, str | None]:
+    host, user, password, from_addr = _smtp_creds()
+    if not (host and user and password and from_addr):
+        return False, "Gmail SMTP is not configured."
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = formataddr(("AI Medical Assistant", from_addr))
+    msg["To"] = to_email
+    msg["Reply-To"] = from_addr
+    msg.attach(MIMEText(plain, "plain", "utf-8"))
+    msg.attach(MIMEText(html, "html", "utf-8"))
+    raw = msg.as_string()
+
+    port = int(_clean(os.environ.get("SMTP_PORT", "")) or settings.smtp_port or 587)
+    use_tls = _env_bool("SMTP_USE_TLS", True)
+    ctx = ssl.create_default_context()
+    errors: list[str] = []
+
+    # Try 465 SSL first (often works better from cloud hosts), then 587 STARTTLS
+    attempts: list[tuple[str, int, str]] = [
+        ("ssl", 465, "SMTP_SSL:465"),
+        ("starttls", port if port != 465 else 587, "SMTP:587+STARTTLS"),
+    ]
+
+    for mode, try_port, label in attempts:
+        try:
+            if mode == "ssl":
+                with smtplib.SMTP_SSL(host, try_port, timeout=30, context=ctx) as server:
+                    server.login(user, password)
+                    server.sendmail(from_addr, [to_email], raw)
+            else:
+                with smtplib.SMTP(host, try_port, timeout=30) as server:
+                    server.ehlo()
+                    if use_tls:
+                        server.starttls(context=ctx)
+                        server.ehlo()
+                    server.login(user, password)
+                    server.sendmail(from_addr, [to_email], raw)
+            log.info("Gmail SMTP sent to %s via %s", to_email, label)
+            return True, None
+        except Exception as exc:
+            log.warning("Gmail %s failed for %s: %s", label, to_email, exc)
+            errors.append(_friendly_smtp_error(exc))
+
+    return False, errors[-1] if errors else "Gmail SMTP failed."
+
+
+def _send_message(to_email: str, subject: str, plain: str, html: str | None = None) -> tuple[bool, str | None]:
     to_email = normalize_recipient(to_email)
     if not is_valid_email(to_email):
-        log.warning("Invalid recipient email: %s", to_email)
-        return False
-    if not smtp_is_configured():
-        log.warning(
-            "SMTP not configured — cannot email %s. Set SMTP_USER, SMTP_PASSWORD, SMTP_FROM on Render.",
-            to_email,
+        return False, "Invalid email address."
+    if not email_is_configured():
+        return False, (
+            "Email is not configured. On Render set RESEND_API_KEY (recommended) "
+            "or Gmail SMTP_USER, SMTP_PASSWORD, SMTP_FROM."
         )
-        return False
 
-    host = _smtp_host()
-    port = _smtp_port()
-    user = (settings.smtp_user or "").strip()
-    password = (settings.smtp_password or "").strip().replace(" ", "")
-    from_addr = (settings.smtp_from or user).strip()
+    html_body = html or f"<pre>{plain}</pre>"
 
-    try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = formataddr(("AI Medical Assistant", from_addr))
-        msg["To"] = to_email
-        msg["Reply-To"] = from_addr
-        msg.attach(MIMEText(plain, "plain", "utf-8"))
-        if html:
-            msg.attach(MIMEText(html, "html", "utf-8"))
+    if resend_is_configured():
+        ok, err = _send_via_resend(to_email, subject, plain, html_body)
+        if ok:
+            return True, None
+        if not smtp_is_configured():
+            return False, err
+        log.warning("Resend failed, trying Gmail SMTP: %s", err)
 
-        if port == 465:
-            with smtplib.SMTP_SSL(host, port, timeout=30) as server:
-                server.login(user, password)
-                server.sendmail(from_addr, [to_email], msg.as_string())
-        else:
-            with smtplib.SMTP(host, port, timeout=30) as server:
-                server.ehlo()
-                if settings.smtp_use_tls:
-                    server.starttls()
-                    server.ehlo()
-                server.login(user, password)
-                server.sendmail(from_addr, [to_email], msg.as_string())
-        log.info("Email sent to %s | subject: %s", to_email, subject)
-        return True
-    except Exception:
-        log.exception("Failed to send email to %s", to_email)
-        return False
+    return _send_via_gmail_smtp(to_email, subject, plain, html_body)
 
 
 def send_otp_email(
@@ -99,8 +215,7 @@ def send_otp_email(
     otp_code: str,
     *,
     purpose: str = "verify your email for registration",
-) -> bool:
-    """Send Telegram-style OTP to the address the user entered at sign-up."""
+) -> tuple[bool, str | None]:
     minutes = settings.otp_expire_minutes
     subject = f"Your Code - {otp_code}"
     plain = (
@@ -124,7 +239,6 @@ Use it to {purpose}.</p>
 
 
 def send_welcome_email(to_email: str, name: str) -> bool:
-    """Sent after successful registration."""
     display = (name or "there").strip() or "there"
     subject = "Welcome to AI Medical Assistant"
     plain = (
@@ -139,4 +253,5 @@ def send_welcome_email(to_email: str, name: str) -> bool:
 <p>Your account is ready. Sign in anytime with the email and password you chose.</p>
 <p>Yours,<br>The AI Medical Assistant Team</p>
 </body></html>"""
-    return _send_message(to_email, subject, plain, html)
+    ok, _ = _send_message(to_email, subject, plain, html)
+    return ok
