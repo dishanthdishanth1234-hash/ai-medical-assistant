@@ -407,7 +407,7 @@
             data.message ||
               `Code sent to ${email}. Open your inbox — subject line starts with "Your Code -".`
           );
-          toast("Check your email for the 6-digit code.", "success");
+          toast("Code sending — check your inbox in a few seconds.", "success");
           return;
         }
         showAlertBanner(data.message || "Could not send verification email.", "error");

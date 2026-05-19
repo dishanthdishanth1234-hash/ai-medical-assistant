@@ -1,7 +1,7 @@
 """Registration (email OTP), login, and profile endpoints."""
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -23,8 +23,10 @@ from models.schemas import (
 )
 from security import create_access_token, hash_password, verify_password
 from services.email_otp import (
+    deliver_otp_email_background,
     email_is_configured,
     is_valid_email,
+    resend_is_configured,
     send_otp_email,
     send_welcome_email,
 )
@@ -66,7 +68,11 @@ def _otp_delivery_response(
 
 
 @router.post("/register/send-otp", response_model=SendOtpResponse)
-def register_send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
+def register_send_otp(
+    payload: SendOtpRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     email = str(payload.email).lower().strip()
     if not is_valid_email(email):
         raise HTTPException(status_code=400, detail="Enter a valid email address")
@@ -87,11 +93,21 @@ def register_send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=_EMAIL_NOT_CONFIGURED,
         )
-    email_sent, send_error = send_otp_email(
-        email,
-        code,
-        purpose="verify your email for registration",
-    )
+
+    purpose = "verify your email for registration"
+    if resend_is_configured():
+        background_tasks.add_task(deliver_otp_email_background, email, code, purpose=purpose)
+        return SendOtpResponse(
+            message=(
+                f"Verification code is on its way to {email}. "
+                "Check your inbox in a few seconds (subject: Your Code - …). "
+                "Works with Gmail, Outlook, Yahoo, and other providers."
+            ),
+            email_sent=True,
+            dev_otp=code if settings.show_otp_in_dev else None,
+        )
+
+    email_sent, send_error = send_otp_email(email, code, purpose=purpose)
     return _otp_delivery_response(
         email=email,
         code=code,
@@ -106,7 +122,11 @@ def register_send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-def register(payload: UserRegister, db: Session = Depends(get_db)):
+def register(
+    payload: UserRegister,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     email = str(payload.email).lower()
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -130,7 +150,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     if email_is_configured():
-        send_welcome_email(user.email, user.name)
+        background_tasks.add_task(send_welcome_email, user.email, user.name)
     return user
 
 
@@ -144,7 +164,11 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
 
 
 @router.post("/forgot-password/send-otp", response_model=SendOtpResponse)
-def forgot_password_send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
+def forgot_password_send_otp(
+    payload: SendOtpRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     email = str(payload.email).lower()
     user = db.scalar(select(User).where(User.email == email))
     if not user:
@@ -164,11 +188,20 @@ def forgot_password_send_otp(payload: SendOtpRequest, db: Session = Depends(get_
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=_EMAIL_NOT_CONFIGURED,
         )
-    email_sent, send_error = send_otp_email(
-        email,
-        code,
-        purpose="reset your password",
-    )
+
+    purpose = "reset your password"
+    if resend_is_configured():
+        background_tasks.add_task(deliver_otp_email_background, email, code, purpose=purpose)
+        return SendOtpResponse(
+            message=(
+                f"Reset code is on its way to {email}. "
+                "Check your inbox in a few seconds (subject: Your Code - …)."
+            ),
+            email_sent=True,
+            dev_otp=code if settings.show_otp_in_dev else None,
+        )
+
+    email_sent, send_error = send_otp_email(email, code, purpose=purpose)
     return _otp_delivery_response(
         email=email,
         code=code,
