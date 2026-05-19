@@ -121,10 +121,33 @@ ai-medical-assistant/
     migration_v2.sql
 ```
 
+## Deploy on Render (GitHub)
+
+1. Push this repo to GitHub and connect it in [Render](https://render.com) (Blueprint or Web Service).
+2. Use `render.yaml` or set:
+   - **Build:** `pip install -r requirements.txt`
+   - **Start:** `uvicorn --app-dir backend app:app --host 0.0.0.0 --port $PORT`
+   - **Health check:** `/healthz`
+3. **Environment variables** (Render → Environment) — **required for OTP email:**
+   - `JWT_SECRET_KEY` — long random string (Render can generate one)
+   - `DB_BACKEND=sqlite` and `SQLITE_PATH=/tmp/medical_assistant.db` for a simple demo
+   - `SMTP_HOST=smtp.gmail.com`
+   - `SMTP_PORT=587`
+   - `SMTP_USE_TLS=true`
+   - `SMTP_USER` — your Gmail address (e.g. `you@gmail.com`)
+   - `SMTP_PASSWORD` — [Gmail App Password](https://myaccount.google.com/apppasswords) (16 characters, not your normal password)
+   - `SMTP_FROM` — same Gmail as `SMTP_USER`
+   - `SHOW_OTP_IN_DEV=false`
+   - `USER_DATA_RETENTION_HOURS=24`
+4. **Redeploy** after saving env vars. Users receive email like Telegram: subject **`Your Code - 123456`**, body with the 6-digit code. Codes are **not** shown on the website.
+
+## Privacy and data retention
+
+- **Account** (email + password hash) stays so you can sign in.
+- **Activity** (symptom checks, chat, health tracker, appointments, generated PDFs) is **removed from the server** after `USER_DATA_RETENTION_HOURS` (default **24 hours**). The dashboard shows this notice.
+- Render’s filesystem is ephemeral; do not rely on local PDF folders for long-term storage.
+
 ## Notes
 
 - `Base.metadata.create_all` in `app.py` helps local development; production deployments should use migrations (Alembic).
 - This project is an **educational assistant**, not a regulated medical device.
-=======
-# ai-medical-assistant
-AI Medical Assistant with symptom analysis, doctor recommendation, diet plan and appointment system

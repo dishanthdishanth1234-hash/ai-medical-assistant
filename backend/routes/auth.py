@@ -22,15 +22,45 @@ from models.schemas import (
     UserRegister,
 )
 from security import create_access_token, hash_password, verify_password
-from services.email_otp import send_otp_email
+from services.email_otp import is_valid_email, send_otp_email, send_welcome_email, smtp_is_configured
 from services.otp_utils import generate_otp_digits, hash_otp, otp_expires_at
 
 router = APIRouter(prefix="", tags=["auth"])
 
+_EMAIL_FAIL_DETAIL = (
+    "Could not send email. The server must have Gmail SMTP configured "
+    "(SMTP_USER, SMTP_PASSWORD, SMTP_FROM). Check your inbox spam folder after retrying."
+)
+
+
+def _otp_delivery_response(
+    *,
+    email: str,
+    code: str,
+    email_sent: bool,
+    success_message: str,
+    dev_fallback_message: str,
+) -> SendOtpResponse:
+    if email_sent:
+        return SendOtpResponse(
+            message=success_message,
+            email_sent=True,
+            dev_otp=code if settings.show_otp_in_dev else None,
+        )
+    if settings.show_otp_in_dev:
+        return SendOtpResponse(
+            message=dev_fallback_message,
+            email_sent=False,
+            dev_otp=code,
+        )
+    raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=_EMAIL_FAIL_DETAIL)
+
 
 @router.post("/register/send-otp", response_model=SendOtpResponse)
 def register_send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
-    email = str(payload.email).lower()
+    email = str(payload.email).lower().strip()
+    if not is_valid_email(email):
+        raise HTTPException(status_code=400, detail="Enter a valid email address")
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(status_code=400, detail="Email already registered")
     code = generate_otp_digits()
@@ -43,16 +73,26 @@ def register_send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
     else:
         db.add(RegistrationOtp(email=email, code_hash=h, expires_at=exp))
     db.commit()
-    email_sent = send_otp_email(email, code)
-    if email_sent:
-        msg = "Verification code sent to your email. Continue to the next step and enter the 6-digit code."
-        dev = code if settings.show_otp_in_dev else None
-    else:
-        msg = (
-            "Email could not be sent. Use the verification code shown below, or configure Gmail SMTP."
+    if not smtp_is_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=_EMAIL_FAIL_DETAIL,
         )
-        dev = code
-    return SendOtpResponse(message=msg, email_sent=email_sent, dev_otp=dev)
+    email_sent = send_otp_email(
+        email,
+        code,
+        purpose="verify your email for registration",
+    )
+    return _otp_delivery_response(
+        email=email,
+        code=code,
+        email_sent=email_sent,
+        success_message=(
+            f"Verification code sent to {email}. Open your inbox (subject: Your Code - ••••••) "
+            "and enter the 6-digit code in step 2."
+        ),
+        dev_fallback_message="SMTP failed (dev mode). Use the code below only on localhost.",
+    )
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
@@ -79,6 +119,8 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
+    if smtp_is_configured():
+        send_welcome_email(user.email, user.name)
     return user
 
 
@@ -107,23 +149,25 @@ def forgot_password_send_otp(payload: SendOtpRequest, db: Session = Depends(get_
     else:
         db.add(PasswordResetOtp(email=email, code_hash=code_hash, expires_at=expires_at))
     db.commit()
+    if not smtp_is_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=_EMAIL_FAIL_DETAIL,
+        )
     email_sent = send_otp_email(
         email,
         code,
-        subject="Your password reset code - AI Medical Assistant",
-        intro="Your AI Medical Assistant password reset code is:",
-        action_note="If you did not request a password reset, ignore this email.",
+        purpose="reset your password",
     )
-    if email_sent:
-        return SendOtpResponse(
-            message="Password reset code sent to your email. Enter the 6-digit OTP to continue.",
-            email_sent=True,
-            dev_otp=code if settings.show_otp_in_dev else None,
-        )
-    return SendOtpResponse(
-        message="Email could not be sent. Use the reset code shown below, or configure Gmail SMTP.",
-        email_sent=False,
-        dev_otp=code,
+    return _otp_delivery_response(
+        email=email,
+        code=code,
+        email_sent=email_sent,
+        success_message=(
+            f"Password reset code sent to {email}. Check your inbox "
+            "(subject: Your Code - ••••••) and enter the 6-digit code below."
+        ),
+        dev_fallback_message="SMTP failed (dev mode). Use the reset code below only on localhost.",
     )
 
 

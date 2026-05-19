@@ -287,6 +287,9 @@ class PublicAppConfig(BaseModel):
     emergency_number: str
     footer_text: str
     hospitals: List[NearbyHospitalOut]
+    data_retention_hours: int
+    data_retention_notice: str
+    email_ready: bool = False
 
 
 class AdminDashboardStats(BaseModel):

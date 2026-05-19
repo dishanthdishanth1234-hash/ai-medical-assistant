@@ -1,6 +1,7 @@
 
 backend/.env
 backend/*.db
+backend/generated_reports/
 backend/.venv/
 __pycache__/
 *.pyc

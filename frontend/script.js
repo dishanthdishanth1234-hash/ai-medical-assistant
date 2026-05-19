@@ -129,18 +129,16 @@
     return data;
   }
 
-  function setButtonLoading(button, spinner, isLoading, loadingText) {
+  function setButtonLoading(button, isLoading, loadingText) {
     if (!button) return;
-    const textEl = $(".btn-text", button);
-    if (textEl && !button.dataset.defaultText) {
+    const textEl =
+      $(".btn-text", button) || $(".analyze-label", button) || (button.id === "healthSubmit" ? button : null) || button;
+    if (!button.dataset.defaultText) {
       button.dataset.defaultText = textEl.textContent;
     }
     button.disabled = isLoading;
     button.setAttribute("aria-busy", isLoading ? "true" : "false");
-    if (spinner) spinner.hidden = true;
-    if (textEl) {
-      textEl.textContent = isLoading && loadingText ? loadingText : button.dataset.defaultText || textEl.textContent;
-    }
+    textEl.textContent = isLoading && loadingText ? loadingText : button.dataset.defaultText;
   }
 
   async function fetchCurrentUser(force = false) {
@@ -170,6 +168,13 @@
     if (disclaimer) {
       disclaimer.innerHTML = `<strong>Medical disclaimer:</strong> ${escapeHtml(config.footer_text || "")}`;
     }
+    const retention = $("#dataRetentionNotice");
+    if (retention && config.data_retention_notice) {
+      retention.textContent = config.data_retention_notice;
+      retention.hidden = false;
+    }
+    const emailHint = $("#emailNotReadyHint");
+    if (emailHint) emailHint.hidden = Boolean(config.email_ready);
     const em = $("#emergencyNumberDisplay");
     if (em) em.textContent = config.emergency_number || "112";
   }
@@ -307,14 +312,13 @@
   }
 
   function authPage() {
+    $$(".otp-reveal").forEach((el) => el.remove());
     const tabs = $$(".tab");
     const panels = { login: $("#panel-login"), register: $("#panel-register") };
     initPasswordToggles();
     const forgotCard = $("#forgotPasswordCard");
     const resetEmail = $("#resetEmail");
     const resetOtpHint = $("#resetOtpHint");
-    const resetOtpRevealBox = $("#resetOtpRevealBox");
-    const resetOtpCodeDisplay = $("#resetOtpCodeDisplay");
     const verifyResetOtpForm = $("#verifyResetOtpForm");
     const resetPasswordForm = $("#resetPasswordForm");
     let resetOtpVerified = false;
@@ -328,8 +332,6 @@
         resetOtpHint.hidden = true;
         resetOtpHint.textContent = "";
       }
-      if (resetOtpRevealBox) resetOtpRevealBox.hidden = true;
-      if (resetOtpCodeDisplay) resetOtpCodeDisplay.textContent = "";
       if (verifyResetOtpForm) verifyResetOtpForm.hidden = true;
       if (resetPasswordForm) resetPasswordForm.hidden = true;
       if ($("#resendResetOtpBtn")) $("#resendResetOtpBtn").hidden = true;
@@ -365,7 +367,6 @@
       const fs = $("#regFieldset");
       if (fs) fs.disabled = true;
       $("#registerStep2").hidden = true;
-      $("#otpRevealBox").hidden = true;
       $("#resendOtpBtn").hidden = true;
       const hint = $("#otpHint");
       if (hint) {
@@ -375,6 +376,19 @@
       $("#registerError").hidden = true;
     }
 
+    function unlockRegisterStep2(message) {
+      const hint = $("#otpHint");
+      if (hint) {
+        hint.hidden = false;
+        hint.textContent = message;
+      }
+      $("#registerStep2").hidden = false;
+      const fs = $("#regFieldset");
+      if (fs) fs.disabled = false;
+      $("#resendOtpBtn").hidden = false;
+      $("#regOtpInput")?.focus();
+    }
+
     async function sendRegistrationOtp(triggerButton) {
       const emailEl = $("#regEmail");
       const email = (emailEl?.value || "").trim();
@@ -382,51 +396,46 @@
         showAlertBanner("Enter your email first.", "error");
         return;
       }
-      const sp = $("#otpSendSpinner");
-      const hint = $("#otpHint");
       const primaryButton = $("#sendOtpBtn");
       const activeButton = triggerButton || primaryButton;
-      setButtonLoading(primaryButton, sp, true, "Sending...");
-      if (activeButton !== primaryButton) setButtonLoading(activeButton, null, true);
+      setButtonLoading(primaryButton, true, "Sending...");
+      if (activeButton !== primaryButton) setButtonLoading(activeButton, true);
       try {
         const data = await api("/register/send-otp", { method: "POST", body: { email } });
-        hint.hidden = false;
-        hint.textContent = data.message || "Code sent.";
-
-        if (!data.email_sent && !data.dev_otp) {
-          showAlertBanner(data.message || "Could not send verification code. Check Gmail SMTP settings.", "error");
+        if (data.email_sent) {
+          unlockRegisterStep2(
+            data.message ||
+              `Code sent to ${email}. Open your inbox — subject line starts with "Your Code -".`
+          );
+          toast("Check your email for the 6-digit code.", "success");
           return;
         }
-
-        $("#registerStep2").hidden = false;
-        const fs = $("#regFieldset");
-        if (fs) fs.disabled = false;
-        $("#resendOtpBtn").hidden = false;
-
-        const reveal = $("#otpRevealBox");
-        const codeEl = $("#otpCodeDisplay");
-        const otpInput = $("#regOtpInput");
-        if (data.dev_otp && reveal && codeEl) {
-          codeEl.textContent = data.dev_otp;
-          reveal.hidden = false;
-          if (otpInput) otpInput.value = data.dev_otp;
-        } else if (reveal) {
-          reveal.hidden = true;
-          if (codeEl) codeEl.textContent = "";
-        }
-
-        if (data.email_sent) {
-          toast("Code sent to your email — check inbox and continue to step 2.", "success");
-        } else {
-          toast("Email not sent — use the code shown on screen (or server logs).", "success");
-          showAlertBanner("No email? Use the green code box above, then continue to step 2.", "success");
-        }
+        showAlertBanner(data.message || "Could not send verification email.", "error");
       } catch (ex) {
-        showAlertBanner(ex.message || "Could not send code", "error");
+        showAlertBanner(
+          ex.message ||
+            "Could not send email. Ask the site owner to configure Gmail SMTP on Render, then try again.",
+          "error"
+        );
       } finally {
-        setButtonLoading(primaryButton, sp, false);
-        if (activeButton !== primaryButton) setButtonLoading(activeButton, null, false);
+        setButtonLoading(primaryButton, false);
+        if (activeButton !== primaryButton) setButtonLoading(activeButton, false);
       }
+    }
+
+    function unlockForgotPasswordOtpStep(message) {
+      resetOtpHint.hidden = false;
+      resetOtpHint.textContent = message;
+      verifyResetOtpForm.hidden = false;
+      $("#resendResetOtpBtn").hidden = false;
+      $("#verifyResetError").hidden = true;
+      $("#verifyResetError").textContent = "";
+      $("#resetPasswordError").hidden = true;
+      $("#resetPasswordError").textContent = "";
+      resetPasswordForm.hidden = true;
+      resetOtpVerified = false;
+      verifyResetOtpForm.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      $("#resetOtpInput")?.focus();
     }
 
     async function sendResetOtp(triggerButton) {
@@ -435,44 +444,30 @@
         showAlertBanner("Enter your registered email first.", "error");
         return;
       }
-      const spinner = $("#resetOtpSendSpinner");
       const primaryButton = $("#sendResetOtpBtn");
       const activeButton = triggerButton || primaryButton;
-      setButtonLoading(primaryButton, spinner, true, "Sending...");
-      if (activeButton !== primaryButton) setButtonLoading(activeButton, null, true);
+      setButtonLoading(primaryButton, true, "Sending...");
+      if (activeButton !== primaryButton) setButtonLoading(activeButton, true);
       try {
         const data = await api("/forgot-password/send-otp", { method: "POST", body: { email } });
-        resetOtpHint.hidden = false;
-        resetOtpHint.textContent = data.message || "Reset code sent.";
-
-        if (!data.email_sent && !data.dev_otp) {
-          showAlertBanner(data.message || "Could not send reset code. Check Gmail SMTP settings.", "error");
+        if (data.email_sent) {
+          unlockForgotPasswordOtpStep(
+            data.message ||
+              `Reset code sent to ${email}. Check your inbox — subject: "Your Code - …".`
+          );
+          toast("Check your email for the reset code.", "success");
           return;
         }
-
-        verifyResetOtpForm.hidden = false;
-        $("#resendResetOtpBtn").hidden = false;
-        $("#verifyResetError").hidden = true;
-        $("#verifyResetError").textContent = "";
-        $("#resetPasswordError").hidden = true;
-        $("#resetPasswordError").textContent = "";
-        resetPasswordForm.hidden = true;
-        resetOtpVerified = false;
-        if (data.dev_otp && resetOtpRevealBox && resetOtpCodeDisplay) {
-          resetOtpCodeDisplay.textContent = data.dev_otp;
-          resetOtpRevealBox.hidden = false;
-          $("#resetOtpInput").value = data.dev_otp;
-        } else if (resetOtpRevealBox) {
-          resetOtpRevealBox.hidden = true;
-          resetOtpCodeDisplay.textContent = "";
-        }
-        verifyResetOtpForm.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        toast(data.email_sent ? "Reset code sent to your email." : "Use the reset code shown on screen.", "success");
+        showAlertBanner(data.message || "Could not send reset email.", "error");
       } catch (ex) {
-        showAlertBanner(ex.message || "Could not send reset code", "error");
+        showAlertBanner(
+          ex.message ||
+            "Could not send email. Configure Gmail SMTP on the server, then try again.",
+          "error"
+        );
       } finally {
-        setButtonLoading(primaryButton, spinner, false);
-        if (activeButton !== primaryButton) setButtonLoading(activeButton, null, false);
+        setButtonLoading(primaryButton, false);
+        if (activeButton !== primaryButton) setButtonLoading(activeButton, false);
       }
     }
 
@@ -497,11 +492,10 @@
       e.preventDefault();
       const form = e.target;
       const err = $("#loginError");
-      const sp = $("#loginSpinner");
       const submitButton = form.querySelector('button[type="submit"]');
       err.hidden = true;
       const fd = new FormData(form);
-      setButtonLoading(submitButton, sp, true, "Signing in...");
+      setButtonLoading(submitButton, true, "Signing in...");
       try {
         const data = await api("/login", {
           method: "POST",
@@ -516,7 +510,7 @@
         err.hidden = false;
         showAlertBanner(ex.message || "Login failed", "error");
       } finally {
-        setButtonLoading(submitButton, sp, false);
+        setButtonLoading(submitButton, false);
       }
     });
 
@@ -527,35 +521,12 @@
     $("#sendResetOtpBtn")?.addEventListener("click", (e) => sendResetOtp(e.currentTarget));
     $("#resendResetOtpBtn")?.addEventListener("click", (e) => sendResetOtp(e.currentTarget));
 
-    $("#copyOtpBtn")?.addEventListener("click", async () => {
-      const code = $("#otpCodeDisplay")?.textContent?.trim() || "";
-      if (!code) return;
-      try {
-        await navigator.clipboard.writeText(code);
-        toast("Code copied", "success");
-      } catch {
-        showAlertBanner("Could not copy — select the code manually.", "error");
-      }
-    });
-
-    $("#copyResetOtpBtn")?.addEventListener("click", async () => {
-      const code = $("#resetOtpCodeDisplay")?.textContent?.trim() || "";
-      if (!code) return;
-      try {
-        await navigator.clipboard.writeText(code);
-        toast("Reset code copied", "success");
-      } catch {
-        showAlertBanner("Could not copy - select the code manually.", "error");
-      }
-    });
-
     $("#verifyResetOtpForm")?.addEventListener("submit", async (e) => {
       e.preventDefault();
       const err = $("#verifyResetError");
-      const spinner = $("#verifyResetSpinner");
       const submitButton = e.target.querySelector('button[type="submit"]');
       err.hidden = true;
-      setButtonLoading(submitButton, spinner, true, "Verifying...");
+      setButtonLoading(submitButton, true, "Verifying...");
       try {
         await api("/forgot-password/verify-otp", {
           method: "POST",
@@ -574,7 +545,7 @@
         err.textContent = ex.message || "OTP verification failed";
         err.hidden = false;
       } finally {
-        setButtonLoading(submitButton, spinner, false);
+        setButtonLoading(submitButton, false);
       }
     });
 
@@ -582,7 +553,6 @@
       e.preventDefault();
       const form = e.target;
       const err = $("#registerError");
-      const sp = $("#registerSpinner");
       const submitButton = form.querySelector('button[type="submit"]');
       err.hidden = true;
       if ($("#regFieldset")?.disabled) {
@@ -611,7 +581,7 @@
       if (w) payload.weight_kg = Number(w);
       if (h) payload.height_cm = Number(h);
       if (mh) payload.medical_history = String(mh);
-      setButtonLoading(submitButton, sp, true, "Creating...");
+      setButtonLoading(submitButton, true, "Creating...");
       try {
         await api("/register", { method: "POST", body: payload });
         toast("Account created — please sign in.", "success");
@@ -622,14 +592,13 @@
         err.hidden = false;
         showAlertBanner(ex.message || "Registration failed", "error");
       } finally {
-        setButtonLoading(submitButton, sp, false);
+        setButtonLoading(submitButton, false);
       }
     });
 
     $("#resetPasswordForm")?.addEventListener("submit", async (e) => {
       e.preventDefault();
       const err = $("#resetPasswordError");
-      const spinner = $("#resetPasswordSpinner");
       const submitButton = e.target.querySelector('button[type="submit"]');
       err.hidden = true;
       if (!resetOtpVerified) {
@@ -637,7 +606,7 @@
         err.hidden = false;
         return;
       }
-      setButtonLoading(submitButton, spinner, true, "Resetting...");
+      setButtonLoading(submitButton, true, "Resetting...");
       try {
         await api("/forgot-password/reset", {
           method: "POST",
@@ -656,7 +625,7 @@
         err.textContent = ex.message || "Password reset failed";
         err.hidden = false;
       } finally {
-        setButtonLoading(submitButton, spinner, false);
+        setButtonLoading(submitButton, false);
       }
     });
   }
@@ -716,7 +685,6 @@
     const chatForm = $("#chatForm");
     const chatInput = $("#chatInput");
     const analyzeBtn = $("#analyzeSend");
-    const analyzeSpinner = $("#symptomSpinner");
     const aiStatus = $("#aiStatus");
     let doctorDirectory = [];
     let activeDoctor = null;
@@ -728,10 +696,14 @@
     }
 
     function setAnalysisLoading(isLoading) {
-      if (analyzeSpinner) analyzeSpinner.hidden = !isLoading;
-      if (analyzeBtn) analyzeBtn.disabled = isLoading;
-      const label = $(".analyze-label", analyzeBtn);
-      if (label) label.hidden = isLoading;
+      if (analyzeBtn) {
+        analyzeBtn.disabled = isLoading;
+        const label = $(".analyze-label", analyzeBtn);
+        if (label) {
+          if (!analyzeBtn.dataset.defaultLabel) analyzeBtn.dataset.defaultLabel = label.textContent;
+          label.textContent = isLoading ? "Analyzing…" : analyzeBtn.dataset.defaultLabel;
+        }
+      }
       if (aiStatus) aiStatus.textContent = isLoading ? "Analyzing…" : "Ready";
     }
 
@@ -952,9 +924,8 @@
       const appt_date = $("#bookDate").value;
       const appt_time = $("#bookTime").value;
       const notes = $("#bookNotes").value.trim() || null;
-      const sp = $("#bookSpinner");
-      sp.hidden = false;
-      $("#bookSubmit").disabled = true;
+      const bookBtn = $("#bookSubmit");
+      setButtonLoading(bookBtn, true, "Booking…");
       try {
         await api("/appointments", {
           method: "POST",
@@ -966,8 +937,7 @@
       } catch (err) {
         showAlertBanner(err.message || "Booking failed", "error");
       } finally {
-        sp.hidden = true;
-        $("#bookSubmit").disabled = false;
+        setButtonLoading(bookBtn, false);
       }
     });
 
@@ -1254,14 +1224,12 @@
       e.preventDefault();
       if (!activeDoctor) return;
       const input = $("#doctorChatInput");
-      const spinner = $("#doctorChatSpinner");
       const send = $("#doctorChatSend");
       const message = input?.value.trim() || "";
       if (!message) return;
       appendDoctorChatBubble("user", message);
       input.value = "";
-      spinner.hidden = false;
-      send.disabled = true;
+      setButtonLoading(send, true, "Sending…");
       try {
         const data = await api("/doctor-chat", {
           method: "POST",
@@ -1271,8 +1239,7 @@
       } catch (err) {
         appendDoctorChatBubble("ai", err.message || "Doctor chat is unavailable right now.");
       } finally {
-        spinner.hidden = true;
-        send.disabled = false;
+        setButtonLoading(send, false);
       }
     });
 
@@ -1281,9 +1248,8 @@
       const weight_kg = Number($("#healthWeight").value);
       const height_cm = Number($("#healthHeight").value);
       const recorded_date = $("#healthDate").value || undefined;
-      const sp = $("#healthSpinner");
-      sp.hidden = false;
-      $("#healthSubmit").disabled = true;
+      const healthBtn = $("#healthSubmit");
+      setButtonLoading(healthBtn, true, "Saving…");
       try {
         await api("/health-data", {
           method: "POST",
@@ -1295,8 +1261,7 @@
       } catch (err) {
         toast(err.message || "Failed to save", "error");
       } finally {
-        sp.hidden = true;
-        $("#healthSubmit").disabled = false;
+        setButtonLoading(healthBtn, false);
       }
     });
 

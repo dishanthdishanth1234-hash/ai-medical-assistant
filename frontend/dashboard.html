@@ -45,6 +45,7 @@
       </header>
 
       <main class="dashboard-layout">
+        <p class="data-retention-notice" id="dataRetentionNotice" hidden role="status"></p>
         <section class="grid-cards">
           <article class="card stat-card slide-up">
             <h3>Profile snapshot</h3>
@@ -99,7 +100,6 @@
               <div class="composer-actions">
                 <button type="submit" class="btn primary" id="analyzeSend">
                   <span class="analyze-label">Analyze symptom</span>
-                  <span class="spinner" id="symptomSpinner" hidden></span>
                 </button>
               </div>
             </div>
@@ -136,10 +136,7 @@
                   <input type="date" id="healthDate" />
                 </label>
               </div>
-              <button type="submit" class="btn secondary" id="healthSubmit">
-                Save entry
-                <span class="spinner inline" id="healthSpinner" hidden></span>
-              </button>
+              <button type="submit" class="btn secondary" id="healthSubmit">Save entry</button>
             </form>
             <div class="table-wrap">
               <table class="data-table" id="healthTable">
@@ -170,7 +167,7 @@
 
         <section class="card slide-up" style="animation-delay: 0.2s">
           <h2>Recent analysis history</h2>
-          <p class="muted small">Recent symptom and assistant records from your account.</p>
+          <p class="muted small">Recent records only — older entries are removed automatically (see notice above).</p>
           <div class="history-scroll" id="historyScroll"></div>
         </section>
       </main>
@@ -201,7 +198,6 @@
             <button type="button" class="btn ghost" data-close="1">Cancel</button>
             <button type="submit" class="btn primary" id="bookSubmit">
               <span class="btn-text">Confirm booking</span>
-              <span class="spinner btn-spinner" id="bookSpinner" hidden></span>
             </button>
           </div>
         </form>
@@ -242,8 +238,7 @@
             <textarea id="doctorChatInput" rows="1" placeholder="Ask your question..." required></textarea>
             <div class="composer-actions">
               <button type="submit" class="btn primary" id="doctorChatSend">
-                <span class="send-label">Send</span>
-                <span class="spinner" id="doctorChatSpinner" hidden></span>
+                <span class="btn-text">Send</span>
               </button>
             </div>
           </div>

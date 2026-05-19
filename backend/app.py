@@ -6,6 +6,7 @@ Run from the `backend` folder:
 
 Open the UI at: http://127.0.0.1:8000/app/
 """
+import asyncio
 import logging
 import os
 import socket
@@ -22,12 +23,28 @@ from migrations import ensure_runtime_schema
 import models.orm  # noqa: F401 — ensure all models register with Base.metadata before create_all
 from routes import admin, appointments, auth, chat, diet, doctors, health_data, reports, symptoms
 from seed import seed_doctors_if_empty, seed_runtime_defaults
+from services.data_retention import purge_expired_data
+from services.email_otp import smtp_is_configured
 
 log = logging.getLogger("uvicorn.error")
 
 
+async def _retention_purge_loop():
+    from config import settings
+
+    interval = max(5, int(settings.data_retention_purge_interval_minutes)) * 60
+    while True:
+        await asyncio.sleep(interval)
+        try:
+            with SessionLocal() as db:
+                purge_expired_data(db)
+        except Exception:
+            log.exception("Scheduled data retention purge failed")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    purge_task = None
     # Create tables on startup (production should use migrations)
     try:
         Base.metadata.create_all(bind=engine)
@@ -36,6 +53,13 @@ async def lifespan(app: FastAPI):
         with SessionLocal() as db:
             seed_doctors_if_empty(db)
             seed_runtime_defaults(db)
+            purge_expired_data(db)
+        purge_task = asyncio.create_task(_retention_purge_loop())
+        if not smtp_is_configured():
+            log.warning(
+                "Gmail SMTP is NOT configured — registration and password reset cannot email OTP codes. "
+                "Set SMTP_HOST, SMTP_USER, SMTP_PASSWORD, SMTP_FROM in Render Environment."
+            )
     except Exception as exc:
         log.exception("Database connection failed")
         if not is_sqlite():
@@ -47,7 +71,15 @@ async def lifespan(app: FastAPI):
         raise RuntimeError(
             "Could not connect or initialize the database. See log above and README (MySQL vs SQLite)."
         ) from exc
-    yield
+    try:
+        yield
+    finally:
+        if purge_task:
+            purge_task.cancel()
+            try:
+                await purge_task
+            except asyncio.CancelledError:
+                pass
 
 
 app = FastAPI(title="AI Medical Assistant API", version="1.0.0", lifespan=lifespan)
@@ -91,8 +123,8 @@ def root_redirect():
 
 @app.get("/healthz")
 def healthz():
-    """Simple readiness probe for deployments."""
-    return {"status": "ok"}
+    """Readiness probe; `email_ready` shows if OTP can be sent to registrants."""
+    return {"status": "ok", "email_ready": smtp_is_configured()}
 
 
 def _local_ipv4() -> str:

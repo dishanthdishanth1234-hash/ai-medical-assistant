@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     # Local dev only: API returns dev_otp in JSON (never enable in production).
     show_otp_in_dev: bool = Field(default=False, validation_alias="SHOW_OTP_IN_DEV")
 
+    # Ephemeral user activity: chats, health logs, appointments, reports are purged after this many hours.
+    user_data_retention_hours: int = Field(default=24, validation_alias="USER_DATA_RETENTION_HOURS")
+    data_retention_purge_interval_minutes: int = Field(
+        default=30, validation_alias="DATA_RETENTION_PURGE_INTERVAL_MINUTES"
+    )
+
 
 settings = Settings()
 

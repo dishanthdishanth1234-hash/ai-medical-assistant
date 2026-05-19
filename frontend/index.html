@@ -11,7 +11,7 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260505d" />
+    <link rel="stylesheet" href="styles.css?v=20260519c" />
     <style>
       .password-field {
         position: relative;
@@ -125,7 +125,6 @@
             <p class="form-error" id="loginError" hidden></p>
             <button type="submit" class="btn primary wide">
               <span class="btn-text">Sign in</span>
-              <span class="spinner btn-spinner" id="loginSpinner" hidden></span>
             </button>
           </form>
 
@@ -134,7 +133,7 @@
               <h2>Reset password</h2>
               <button type="button" class="btn ghost small" id="closeForgotPassword">Close</button>
             </div>
-            <p class="muted small">Enter your registered email, verify the OTP, then create a new password.</p>
+            <p class="muted small">We email a 6-digit code to your inbox (subject: <strong>Your Code - …</strong>). Enter it below — the code is never shown on this page.</p>
 
             <div class="forgot-password-steps">
               <section class="forgot-password-step">
@@ -146,21 +145,11 @@
                   </label>
                   <button type="button" class="btn secondary wide" id="sendResetOtpBtn">
                     <span class="btn-text">Send reset code</span>
-                    <span class="spinner btn-spinner" id="resetOtpSendSpinner" hidden></span>
                   </button>
                   <button type="button" class="btn ghost wide" id="resendResetOtpBtn" hidden>Resend code</button>
                   <p class="hint muted small" id="resetOtpHint" hidden></p>
                 </div>
               </section>
-
-              <div class="otp-reveal card-elevated" id="resetOtpRevealBox" hidden>
-                <strong>Your password reset code</strong>
-                <p class="muted small">Use this only for your own account. For production, configure SMTP so codes are only emailed.</p>
-                <div class="otp-code-row">
-                  <code id="resetOtpCodeDisplay"></code>
-                  <button type="button" class="btn secondary small" id="copyResetOtpBtn">Copy</button>
-                </div>
-              </div>
 
               <form id="verifyResetOtpForm" class="stack" novalidate hidden>
                 <h3 class="reg-step-title">Step 2 - Verify OTP</h3>
@@ -171,7 +160,6 @@
                 <p class="form-error" id="verifyResetError" hidden></p>
                 <button type="submit" class="btn secondary wide">
                   <span class="btn-text">Verify code</span>
-                  <span class="spinner btn-spinner" id="verifyResetSpinner" hidden></span>
                 </button>
               </form>
 
@@ -198,7 +186,6 @@
                 <p class="form-error" id="resetPasswordError" hidden></p>
                 <button type="submit" class="btn primary wide">
                   <span class="btn-text">Reset password</span>
-                  <span class="spinner btn-spinner" id="resetPasswordSpinner" hidden></span>
                 </button>
               </form>
             </div>
@@ -212,7 +199,10 @@
           <div class="reg-steps" aria-label="Registration steps">
             <div class="reg-step" id="registerStep1">
               <h2 class="reg-step-title">Step 1 — Verify email</h2>
-              <p class="hint muted small">We send a 6-digit code to your email. If email is unavailable, use the code shown after sending.</p>
+              <p class="hint muted small">We send a 6-digit code to <strong>the email you enter</strong> (Gmail, Outlook, Yahoo, etc.). Subject: <strong>Your Code - …</strong>. Check spam if needed.</p>
+              <p class="hint muted small form-error" id="emailNotReadyHint" hidden>
+                Email sending is not configured on the server yet. The site owner must add Gmail SMTP on Render.
+              </p>
               <div class="stack">
                 <label class="field">
                   <span>Email</span>
@@ -220,25 +210,15 @@
                 </label>
                 <button type="button" class="btn secondary wide" id="sendOtpBtn">
                   <span class="btn-text">Send verification code</span>
-                  <span class="spinner btn-spinner" id="otpSendSpinner" hidden></span>
                 </button>
                 <button type="button" class="btn ghost wide" id="resendOtpBtn" hidden>Resend code</button>
                 <p class="hint muted small" id="otpHint" hidden></p>
               </div>
             </div>
 
-            <div class="otp-reveal card-elevated" id="otpRevealBox" hidden>
-              <strong>Your verification code</strong>
-              <p class="muted small">Copy this into Step 2. Do not share it. For production, configure SMTP so codes are only sent by email.</p>
-              <div class="otp-code-row">
-                <code id="otpCodeDisplay"></code>
-                <button type="button" class="btn secondary small" id="copyOtpBtn">Copy</button>
-              </div>
-            </div>
-
             <div class="reg-step" id="registerStep2" hidden>
               <h2 class="reg-step-title">Step 2 — Account details</h2>
-              <p class="hint muted small">Enter the code from your email (or from the box above), then your name and password.</p>
+              <p class="hint muted small">Enter the 6-digit code from your email, then your name and password.</p>
             </div>
           </div>
 
@@ -292,7 +272,6 @@
             </fieldset>
             <button type="submit" class="btn primary wide">
               <span class="btn-text">Create account</span>
-              <span class="spinner btn-spinner" id="registerSpinner" hidden></span>
             </button>
           </form>
         </section>
@@ -327,7 +306,7 @@
     </div>
     <div class="alert-banner" id="alertBanner" hidden role="alert"></div>
 
-    <script src="script.js?v=20260505d"></script>
+    <script src="script.js?v=20260519c"></script>
     <script>
       window.MEDASSIST_PAGE = "auth";
     </script>

@@ -1120,15 +1120,15 @@ html[data-theme="dark"] .chat-window {
   }
 }
 
-.btn-spinner {
-  display: none !important;
-  margin-left: 8px;
-  vertical-align: middle;
-}
-
-.btn .btn-spinner {
-  border-color: rgba(255, 255, 255, 0.35);
-  border-top-color: #fff;
+.data-retention-notice {
+  margin: 0 0 1rem;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 118, 110, 0.35);
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.45;
 }
 
 .hint {
@@ -1158,7 +1158,12 @@ html[data-theme="dark"] .chat-window {
   opacity: 0.65;
 }
 
+/* Legacy on-screen OTP boxes — must not appear (codes are email-only) */
 .otp-reveal {
+  display: none !important;
+}
+
+.otp-reveal--unused {
   padding: 14px 16px;
   border: 1px solid rgba(15, 118, 110, 0.45);
   background: rgba(15, 118, 110, 0.1);
