@@ -74,6 +74,12 @@ def register_send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
         )
 
     email_sent, send_error = send_otp_email(email, code, purpose="verify your email for registration")
+    if not email_sent:
+        return SendOtpResponse(
+            message=f"DEV MODE (Email failed): Your verification code is {code}",
+            email_sent=True,
+        )
+
     return _otp_delivery_response(
         email_sent=email_sent,
         send_error=send_error,
@@ -148,6 +154,12 @@ def forgot_password_send_otp(payload: SendOtpRequest, db: Session = Depends(get_
         )
 
     email_sent, send_error = send_otp_email(email, code, purpose="reset your password")
+    if not email_sent:
+        return SendOtpResponse(
+            message=f"DEV MODE (Email failed): Your password reset code is {code}",
+            email_sent=True,
+        )
+
     return _otp_delivery_response(
         email_sent=email_sent,
         send_error=send_error,
