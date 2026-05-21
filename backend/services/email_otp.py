@@ -107,3 +107,55 @@ def send_otp_email(
     except Exception:
         log.exception("SMTP send failed")
         return False, "Could not send email. Please try again."
+
+
+def send_welcome_email(to_email: str, name: str) -> tuple[bool, str | None]:
+    to_email = normalize_recipient(to_email)
+    if not is_valid_email(to_email):
+        return False, "Invalid email address."
+
+    host, user, password, from_addr = _smtp_creds()
+    if not (host and user and password and from_addr):
+        return False, "Email service is not configured. Contact support."
+
+    subject = "Welcome to AI Medical Assistant"
+    plain = (
+        f"Hello {name},\n\n"
+        "Welcome to AI Medical Assistant! Your account has been successfully created.\n"
+    )
+    html = f"""<!DOCTYPE html>
+<html><body style="font-family:Segoe UI,Arial,sans-serif;line-height:1.5;color:#222;">
+<p>Hello {name},</p>
+<p>Welcome to <strong>AI Medical Assistant</strong>! Your account has been successfully created.</p>
+</body></html>"""
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = formataddr(("AI Medical Assistant", from_addr))
+    msg["To"] = to_email
+    msg.attach(MIMEText(plain, "plain", "utf-8"))
+    msg.attach(MIMEText(html, "html", "utf-8"))
+    raw = msg.as_string()
+
+    try:
+        port = settings.smtp_port or 587
+        context = ssl.create_default_context()
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, timeout=_SMTP_TIMEOUT, context=context) as server:
+                server.login(user, password)
+                server.sendmail(from_addr, [to_email], raw)
+        else:
+            with smtplib.SMTP(host, port, timeout=_SMTP_TIMEOUT) as server:
+                server.ehlo()
+                if settings.smtp_use_tls:
+                    server.starttls(context=context)
+                    server.ehlo()
+                server.login(user, password)
+                server.sendmail(from_addr, [to_email], raw)
+        return True, None
+    except smtplib.SMTPAuthenticationError:
+        return False, "Could not send email due to SMTP authentication failure."
+    except Exception:
+        log.exception("SMTP send failed")
+        return False, "Could not send email. Please try again."
+
