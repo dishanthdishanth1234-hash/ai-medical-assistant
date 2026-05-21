@@ -5,7 +5,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from config import settings
 from database import get_db
 from deps import get_current_user
 from models.orm import PasswordResetOtp, RegistrationOtp, User
@@ -33,35 +32,21 @@ from services.otp_utils import generate_otp_digits, hash_otp, otp_expires_at
 router = APIRouter(prefix="", tags=["auth"])
 
 _EMAIL_NOT_CONFIGURED = (
-    "Email is not configured on the server. On Render add RESEND_API_KEY (recommended, free at resend.com) "
-    "or Gmail SMTP_USER + SMTP_PASSWORD + SMTP_FROM, then redeploy."
+    "Email service is not configured on the server. Please try again later."
 )
 
 
 def _otp_delivery_response(
     *,
-    email: str,
-    code: str,
     email_sent: bool,
     send_error: str | None,
     success_message: str,
-    dev_fallback_message: str,
 ) -> SendOtpResponse:
     if email_sent:
-        return SendOtpResponse(
-            message=success_message,
-            email_sent=True,
-            dev_otp=code if settings.show_otp_in_dev else None,
-        )
-    if settings.show_otp_in_dev:
-        return SendOtpResponse(
-            message=dev_fallback_message,
-            email_sent=False,
-            dev_otp=code,
-        )
+        return SendOtpResponse(message=success_message, email_sent=True)
     raise HTTPException(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail=send_error or "Could not send email. Try again or check spam.",
+        detail=send_error or "Could not send verification email. Please try again.",
     )
 
 
@@ -88,18 +73,13 @@ def register_send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
             detail=_EMAIL_NOT_CONFIGURED,
         )
 
-    purpose = "verify your email for registration"
-    email_sent, send_error = send_otp_email(email, code, purpose=purpose)
+    email_sent, send_error = send_otp_email(email, code, purpose="verify your email for registration")
     return _otp_delivery_response(
-        email=email,
-        code=code,
         email_sent=email_sent,
         send_error=send_error,
         success_message=(
-            f"Verification code sent to {email}. Open your inbox (subject: Your Code - ••••••) "
-            "and enter the 6-digit code in step 2."
+            f"Verification code sent to {email}. Check your email and enter the 6-digit code."
         ),
-        dev_fallback_message="SMTP failed (dev mode). Use the code below only on localhost.",
     )
 
 
@@ -167,18 +147,13 @@ def forgot_password_send_otp(payload: SendOtpRequest, db: Session = Depends(get_
             detail=_EMAIL_NOT_CONFIGURED,
         )
 
-    purpose = "reset your password"
-    email_sent, send_error = send_otp_email(email, code, purpose=purpose)
+    email_sent, send_error = send_otp_email(email, code, purpose="reset your password")
     return _otp_delivery_response(
-        email=email,
-        code=code,
         email_sent=email_sent,
         send_error=send_error,
         success_message=(
-            f"Password reset code sent to {email}. Check your inbox "
-            "(subject: Your Code - ••••••) and enter the 6-digit code below."
+            f"Password reset code sent to {email}. Check your email and enter the 6-digit code."
         ),
-        dev_fallback_message="SMTP failed (dev mode). Use the reset code below only on localhost.",
     )
 
 

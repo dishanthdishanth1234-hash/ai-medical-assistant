@@ -16,8 +16,6 @@ services:
         value: /tmp/medical_assistant.db
       - key: USER_DATA_RETENTION_HOURS
         value: "24"
-      - key: SHOW_OTP_IN_DEV
-        value: "false"
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT
@@ -25,7 +23,5 @@ services:
       - key: SMTP_USE_TLS
         value: "true"
       # Set in Render dashboard (do not commit secrets):
-      # RESEND_API_KEY (recommended — from resend.com API Keys)
-      # RESEND_FROM=onboarding@resend.dev (optional)
-      # SMTP_USER, SMTP_PASSWORD, SMTP_FROM (optional Gmail fallback)
+      # SMTP_USER, SMTP_PASSWORD, SMTP_FROM (required for OTP emails)
       # OPENAI_API_KEY (optional)

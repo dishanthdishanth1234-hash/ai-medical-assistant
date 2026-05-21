@@ -24,7 +24,7 @@ import models.orm  # noqa: F401 — ensure all models register with Base.metadat
 from routes import admin, appointments, auth, chat, diet, doctors, health_data, reports, symptoms
 from seed import seed_doctors_if_empty, seed_runtime_defaults
 from services.data_retention import purge_expired_data
-from services.email_otp import email_is_configured, email_provider, resend_uses_test_sender, smtp_is_configured
+from services.email_otp import email_is_configured, email_provider
 
 log = logging.getLogger("uvicorn.error")
 
@@ -57,7 +57,7 @@ async def lifespan(app: FastAPI):
         purge_task = asyncio.create_task(_retention_purge_loop())
         if not email_is_configured():
             log.warning(
-                "Email is NOT configured — set RESEND_API_KEY or Gmail SMTP_* in Render Environment."
+                "Email is NOT configured — set Gmail SMTP_* in server environment."
             )
         else:
             log.info("Email provider: %s", email_provider())
@@ -129,10 +129,6 @@ def healthz():
         "status": "ok",
         "email_ready": email_is_configured(),
         "email_provider": email_provider(),
-        "resend_test_sender_only": resend_uses_test_sender(),
-        "gmail_smtp_configured": smtp_is_configured(),
-        "can_email_any_address": smtp_is_configured()
-        or (email_is_configured() and not resend_uses_test_sender()),
     }
 
 

@@ -62,7 +62,7 @@ Open **`http://127.0.0.1:8000/`** (redirects to **`http://127.0.0.1:8000/app/`**
 
 ### 3) Register and use
 
-1. On **Register**, **step 1:** enter your email and click **Send verification code**. **Step 2** unlocks after a code is generated. If **SMTP is not configured** (or sending fails), the API returns **`dev_otp`** in the JSON and the UI shows the code in a green box so you can still register. With SMTP configured, the code is only emailed. Optional: `SHOW_OTP_IN_DEV=true` also returns the code in JSON when email *was* sent (for debugging only).
+1. On **Register**, **step 1:** enter your email and click **Send verification code**. **Step 2** unlocks after a code is emailed. OTP is never shown in UI/API responses/console logs.
 2. Enter the **6-digit code**, name, and password, then **Create account**.
 3. Sign in → **Dashboard** (chat, single-symptom checker with structured JSON, doctors, **appointments stored in MySQL**), **Diet plan** page, and Emergency (sample hospitals).
 
@@ -137,7 +137,6 @@ ai-medical-assistant/
    - `SMTP_USER` — your Gmail address (e.g. `you@gmail.com`)
    - `SMTP_PASSWORD` — [Gmail App Password](https://myaccount.google.com/apppasswords) (16 characters, not your normal password)
    - `SMTP_FROM` — same Gmail as `SMTP_USER`
-   - `SHOW_OTP_IN_DEV=false`
    - `USER_DATA_RETENTION_HOURS=24`
 4. **Redeploy** after saving env vars. Users receive email like Telegram: subject **`Your Code - 123456`**, body with the 6-digit code. Codes are **not** shown on the website.
 

@@ -12,8 +12,6 @@ class SendOtpRequest(BaseModel):
 class SendOtpResponse(BaseModel):
     message: str
     email_sent: bool = False
-    # Returned when email could not be sent (no SMTP / failure), or when SHOW_OTP_IN_DEV=true
-    dev_otp: Optional[str] = None
 
 
 class PasswordResetVerifyRequest(BaseModel):
