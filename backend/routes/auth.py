@@ -68,9 +68,9 @@ def register_send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
         db.add(RegistrationOtp(email=email, code_hash=h, expires_at=exp))
     db.commit()
     if not email_is_configured():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=_EMAIL_NOT_CONFIGURED,
+        return SendOtpResponse(
+            message=f"DEV MODE (Email not configured): Your verification code is {code}",
+            email_sent=True,
         )
 
     email_sent, send_error = send_otp_email(email, code, purpose="verify your email for registration")
@@ -142,9 +142,9 @@ def forgot_password_send_otp(payload: SendOtpRequest, db: Session = Depends(get_
         db.add(PasswordResetOtp(email=email, code_hash=code_hash, expires_at=expires_at))
     db.commit()
     if not email_is_configured():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=_EMAIL_NOT_CONFIGURED,
+        return SendOtpResponse(
+            message=f"DEV MODE (Email not configured): Your password reset code is {code}",
+            email_sent=True,
         )
 
     email_sent, send_error = send_otp_email(email, code, purpose="reset your password")
