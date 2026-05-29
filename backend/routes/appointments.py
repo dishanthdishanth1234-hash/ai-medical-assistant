@@ -77,7 +77,7 @@ def create_appointment(
     except SQLAlchemyError as e:
         db.rollback()
         logger.error(f"Database error while booking appointment: {e}")
-        raise HTTPException(status_code=500, detail="Database error occurred while saving the appointment.")
+        raise HTTPException(status_code=500, detail=f"Database error occurred while saving the appointment: {str(e)}")
     except Exception as e:
         db.rollback()
         logger.error(f"Unexpected error while booking appointment: {e}")
