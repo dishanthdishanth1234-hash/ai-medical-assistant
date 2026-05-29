@@ -40,6 +40,11 @@ def list_appointments(
     return [_to_out(a) for a in rows]
 
 
+import logging
+from sqlalchemy.exc import SQLAlchemyError
+
+logger = logging.getLogger(__name__)
+
 @router.post("", response_model=AppointmentOut, status_code=status.HTTP_201_CREATED)
 def create_appointment(
     payload: AppointmentCreate,
@@ -57,15 +62,26 @@ def create_appointment(
         appt_time=payload.appt_time,
         notes=notes,
     )
-    db.add(row)
-    db.commit()
-    db.refresh(row)
-    row = db.scalar(
-        select(Appointment)
-        .where(Appointment.id == row.id)
-        .options(joinedload(Appointment.doctor))
-    )
-    return _to_out(row)
+    try:
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        row = db.scalar(
+            select(Appointment)
+            .where(Appointment.id == row.id)
+            .options(joinedload(Appointment.doctor))
+        )
+        if not row:
+            raise HTTPException(status_code=500, detail="Failed to retrieve saved appointment.")
+        return _to_out(row)
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Database error while booking appointment: {e}")
+        raise HTTPException(status_code=500, detail="Database error occurred while saving the appointment.")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Unexpected error while booking appointment: {e}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while processing the appointment.")
 
 
 @router.delete("/{appointment_id}")

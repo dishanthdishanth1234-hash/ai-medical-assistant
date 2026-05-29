@@ -174,13 +174,20 @@ class AppointmentCreate(BaseModel):
     appt_time: str = Field(min_length=4, max_length=8)
     notes: Optional[str] = Field(default=None, max_length=500)
 
+    @field_validator("appt_date")
+    @classmethod
+    def date_not_in_past(cls, v: date) -> date:
+        if v < date.today():
+            raise ValueError("Appointment date cannot be in the past")
+        return v
+
     @field_validator("appt_time")
     @classmethod
     def normalize_time(cls, v: str) -> str:
         v = v.strip()
         parts = v.split(":")
-        if len(parts) != 2:
-            raise ValueError("Time must be HH:MM (24h)")
+        if len(parts) not in (2, 3):
+            raise ValueError("Time must be HH:MM or HH:MM:SS (24h)")
         h, m = int(parts[0]), int(parts[1])
         if not (0 <= h <= 23 and 0 <= m <= 59):
             raise ValueError("Invalid time")
